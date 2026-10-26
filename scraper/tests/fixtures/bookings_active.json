@@ -1,0 +1,17 @@
+{
+  "pagination": {"page": 0, "pageSize": 80, "totalCount": 2},
+  "payload": [
+    {
+      "id": 1001, "name": "Alice Sample", "firstName": "Alice", "lastName": "Sample",
+      "memberId": 9001, "date": "Mon, 13 Jul 2026 10:00:00 GMT",
+      "checkedIn": true, "deletedAt": null, "isLateCancelled": false,
+      "roomSpotId": 10, "paymentMode": "stripe", "prevVisits": 5
+    },
+    {
+      "id": 1002, "name": "Bob Sample", "firstName": "Bob", "lastName": "Sample",
+      "memberId": 9002, "date": "Mon, 13 Jul 2026 11:00:00 GMT",
+      "checkedIn": false, "deletedAt": null, "isLateCancelled": false,
+      "roomSpotId": 20, "paymentMode": "urban-sports-club", "prevVisits": 0
+    }
+  ]
+}

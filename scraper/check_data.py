@@ -1,5 +1,8 @@
 """Verify our signup counts match Momence's reported aggregates. Exits 1 if mismatches found."""
-import sqlite3, sys
+
+import sqlite3
+import sys
+
 from config import DB_PATH
 
 db = sqlite3.connect(DB_PATH)
@@ -30,9 +33,9 @@ real_mismatches = []
 for r in rows:
     key = (r["local_date"], r["name"])
     gap = KNOWN_GAPS.get(key, {})
-    ci_diff  = r["m_checked_in"] - r["our_checked_in"]
-    ns_diff  = r["m_no_show"]    - r["our_no_show"]
-    can_diff = r["m_cancelled"]  - r["our_cancelled"]
+    ci_diff = r["m_checked_in"] - r["our_checked_in"]
+    ns_diff = r["m_no_show"] - r["our_no_show"]
+    can_diff = r["m_cancelled"] - r["our_cancelled"]
     if ci_diff == gap.get("checked_in", 0) and ns_diff == 0 and can_diff == 0:
         print(f"KNOWN  {r['local_date']} {r['name']} — group booking gap ({ci_diff} guest without Momence account)")
     else:

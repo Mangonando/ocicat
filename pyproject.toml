@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # long lines acceptable in SQL strings
+
+[tool.pytest.ini_options]
+testpaths = ["scraper/tests"]
+pythonpath = ["scraper"]

@@ -1,11 +1,11 @@
 """Auto-login using credentials from .env. Run once (and whenever the session expires)."""
+
 import os
 from pathlib import Path
 
+from config import LOGIN_URL, PROFILE_DIR
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
-
-from config import LOGIN_URL, PROFILE_DIR
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 

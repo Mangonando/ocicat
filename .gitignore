@@ -1,0 +1,8 @@
+data/
+.env
+.venv/
+__pycache__/
+*.pyc
+*.har
+.DS_Store
+ROADMAP.md
