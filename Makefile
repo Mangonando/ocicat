@@ -1,4 +1,4 @@
-.PHONY: lint test scrape dev fe-test fe-lint
+.PHONY: lint test scrape dev fe-test fe-lint api
 
 lint:
 	ruff check backend/
@@ -18,3 +18,6 @@ fe-test:
 
 fe-lint:
 	cd frontend && npx tsc --noEmit && npm run lint
+
+api:
+	cd backend && uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
