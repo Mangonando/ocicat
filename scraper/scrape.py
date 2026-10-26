@@ -3,7 +3,8 @@ import argparse, sqlite3, subprocess, sys
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from config import (DB_PATH, DEFAULT_LOOKBACK_DAYS, HOST_ID, ROOT, TZ)
+from config import (DB_PATH, DEFAULT_LOOKBACK_DAYS, HOST_ID, ROOT, TEACHER_ID, TZ)
+from migrate import run as run_migrations
 from sources import AuthError, HarSource, LiveSource
 
 PAGE = 20
@@ -18,6 +19,7 @@ def connect():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB_PATH)
     db.executescript((ROOT / "scraper" / "schema.sql").read_text())
+    run_migrations(db)
     return db
 
 
@@ -61,18 +63,24 @@ def status_of(b, class_ended):
 def save_class(db, s, counts, ts):
     start = datetime.fromisoformat(s["startsAt"].replace("Z", "+00:00"))
     local = start.astimezone(ZoneInfo(TZ))
-    db.execute("""INSERT INTO classes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    is_mine = int(s.get("teacherId") == TEACHER_ID)
+    db.execute("""INSERT INTO classes
+        (id, name, starts_at_utc, local_date, local_time, weekday, duration_min,
+         location_id, location, teacher_id, capacity, is_cancelled,
+         m_signups, m_active, m_cancelled, m_checked_in, m_no_show, is_mine, scraped_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(id) DO UPDATE SET name=excluded.name, starts_at_utc=excluded.starts_at_utc,
       local_date=excluded.local_date, local_time=excluded.local_time, weekday=excluded.weekday,
       duration_min=excluded.duration_min, location_id=excluded.location_id, location=excluded.location,
       teacher_id=excluded.teacher_id, capacity=excluded.capacity, is_cancelled=excluded.is_cancelled,
       m_signups=excluded.m_signups, m_active=excluded.m_active, m_cancelled=excluded.m_cancelled,
-      m_checked_in=excluded.m_checked_in, m_no_show=excluded.m_no_show, scraped_at=excluded.scraped_at""",
+      m_checked_in=excluded.m_checked_in, m_no_show=excluded.m_no_show,
+      is_mine=excluded.is_mine, scraped_at=excluded.scraped_at""",
                (s["id"], s["name"], s["startsAt"], local.date().isoformat(), local.strftime("%H:%M"),
                 local.weekday(), s.get("duration"), s.get("locationId"), s.get("location"),
                 s.get("teacherId"), s.get("capacity"), int(bool(s.get("isCancelled"))),
                 counts.get("numberOfSignUps"), counts.get("active"), counts.get("cancelled"),
-                counts.get("checkedIn"), counts.get("noShow"), ts))
+                counts.get("checkedIn"), counts.get("noShow"), is_mine, ts))
 
 
 def save_booking(db, class_id, b, status, ts, cancelled_at=None):
@@ -103,7 +111,9 @@ def scrape_class(db, src, s, ts):
         for b in active:
             save_booking(db, sid, b, status_of(b, ended), ts)
         for b in cancelled:
-            save_booking(db, sid, b, "cancelled", ts, cancelled_at=b.get("deletedAt"))
+            # If checked in before the booking was deleted, Momence still counts them as attended
+            status = "checked_in" if b.get("checkedIn") else "cancelled"
+            save_booking(db, sid, b, status, ts, cancelled_at=b.get("deletedAt"))
     return len(active) + len(cancelled)
 
 

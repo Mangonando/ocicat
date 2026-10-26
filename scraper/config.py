@@ -4,6 +4,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "ride.db"
 PROFILE_DIR = ROOT / "data" / "browser-profile"   # holds your login, never commit
 HOST_ID = 232291                                   # ride.bln
+TEACHER_ID = 372616                                # Juan's Momence teacher id
 TZ = "Europe/Berlin"
 BASE = "https://momence.com/_api"
 DEFAULT_LOOKBACK_DAYS = 10
