@@ -1,6 +1,6 @@
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 DB_PATH = ROOT / "data" / "ride.db"
 PROFILE_DIR = ROOT / "data" / "browser-profile"  # holds your login, never commit
 HOST_ID = 232291  # ride.bln

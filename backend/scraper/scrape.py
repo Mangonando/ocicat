@@ -23,7 +23,7 @@ def now_iso():
 def connect():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB_PATH)
-    db.executescript((ROOT / "scraper" / "schema.sql").read_text())
+    db.executescript((ROOT / "backend" / "scraper" / "schema.sql").read_text())
     run_migrations(db)
     return db
 

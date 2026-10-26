@@ -7,7 +7,7 @@ from config import LOGIN_URL, PROFILE_DIR
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 EMAIL = os.environ["MOMENCE_EMAIL"]
 PASSWORD = os.environ["MOMENCE_PASSWORD"]

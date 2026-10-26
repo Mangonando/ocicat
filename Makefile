@@ -1,11 +1,11 @@
 .PHONY: lint test scrape
 
 lint:
-	ruff check scraper/
-	ruff format --check scraper/
+	ruff check backend/
+	ruff format --check backend/
 
 test:
-	pytest -v
+	cd backend && pytest -v
 
 scrape:
-	cd scraper && python scrape.py
+	cd backend/scraper && python scrape.py
