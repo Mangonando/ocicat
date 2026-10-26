@@ -218,13 +218,29 @@ def main():
         )
         db.commit()
         print(f"Done: {n_classes} classes, {n_signups} bookings.")
+        from backup import backup
+
+        backup()
     except AuthError as e:
         db.execute("UPDATE runs SET finished_at=?, ok=0, note=? WHERE id=?", (now_iso(), str(e), run_id))
         db.commit()
-        notify("Momence login expired - run login.py")
-        sys.exit(str(e))
+        src.close()  # must close before starting a new Playwright instance
+        print(f"Auth error: {e} — attempting re-login...")
+        try:
+            from login import login as do_login
+
+            do_login()
+            notify("ride analytics: re-logged in — next scheduled run will work")
+            print("Re-login successful.")
+        except Exception as login_err:
+            notify(f"ride analytics: login failed — check .env ({type(login_err).__name__})")
+            print(f"Re-login failed: {login_err}")
+        sys.exit(1)
     finally:
-        src.close()
+        try:
+            src.close()
+        except Exception:
+            pass  # already closed in AuthError handler
 
 
 if __name__ == "__main__":
