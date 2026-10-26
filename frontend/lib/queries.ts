@@ -147,6 +147,45 @@ export function getCustomerVisits(memberId: number): Visit[] {
   }
 }
 
+export interface UpcomingBooking {
+  class_id: number;
+  class_name: string;
+  local_date: string;
+  local_time: string;
+  location: string | null;
+  weekday: number;
+  capacity: number | null;
+  member_id: number;
+  customer_name: string;
+  attended: number;
+  last_visit: string | null;
+}
+
+export function getUpcomingBookings(from: string, to: string): UpcomingBooking[] {
+  try {
+    return getDb()
+      .prepare(
+        `SELECT c.id AS class_id, c.name AS class_name, c.local_date, c.local_time,
+          c.location, c.weekday, c.capacity,
+          cu.member_id, cu.name AS customer_name,
+          COALESCE(cs.attended, 0) AS attended,
+          cs.last_visit
+         FROM classes c
+         JOIN signups s ON s.class_id = c.id
+         JOIN customers cu ON cu.member_id = s.member_id
+         LEFT JOIN v_customer_stats cs ON cs.member_id = cu.member_id
+         WHERE c.local_date >= ? AND c.local_date <= ?
+           AND c.is_mine = 1
+           AND c.is_cancelled = 0
+           AND s.status = 'booked'
+         ORDER BY c.local_date, c.local_time, c.location, cu.name`,
+      )
+      .all(from, to) as UpcomingBooking[];
+  } catch {
+    return [];
+  }
+}
+
 export function getCustomerStat(memberId: number): CustomerStat | null {
   try {
     return (

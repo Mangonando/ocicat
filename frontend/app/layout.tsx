@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 };
 
 const NAV = [
+  { href: "/upcoming", label: "Upcoming" },
   { href: "/tiers", label: "Loyalty tiers" },
   { href: "/regulars", label: "Top regulars" },
   { href: "/lapsed", label: "One-and-done / lapsed" },

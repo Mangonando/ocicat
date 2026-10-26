@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from config import DB_PATH, DEFAULT_LOOKBACK_DAYS, HOST_ID, ROOT, TEACHER_ID, TZ
+from config import DB_PATH, DEFAULT_LOOKAHEAD_DAYS, DEFAULT_LOOKBACK_DAYS, HOST_ID, ROOT, TEACHER_ID, TZ
 from migrate import run as run_migrations
 from sources import AuthError, HarSource, LiveSource
 
@@ -189,11 +189,12 @@ def main():
             print("Ran recently, nothing to do (use --force).")
             return
 
-    until = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    until = now + timedelta(days=DEFAULT_LOOKAHEAD_DAYS)  # API window: past + upcoming
     since = (
         datetime.fromisoformat(a.since).replace(tzinfo=ZoneInfo(TZ)).astimezone(timezone.utc)
         if a.since
-        else until - timedelta(days=a.days)
+        else now - timedelta(days=a.days)  # lookback from now, not from until
     )
     run_id = db.execute("INSERT INTO runs(started_at, since) VALUES (?,?)", (now_iso(), since.isoformat())).lastrowid
     db.commit()
@@ -202,8 +203,6 @@ def main():
     n_classes = n_signups = 0
     try:
         for s in list_sessions(src, since, until):
-            if datetime.fromisoformat(s["endsAt"].replace("Z", "+00:00")) > until:
-                continue  # not finished yet; next run picks it up
             try:
                 n_signups += scrape_class(db, src, s, now_iso())
                 n_classes += 1
