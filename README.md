@@ -2,8 +2,8 @@
 
 A local attendance dashboard for my indoor cycling classes. A small scraper pulls class
 bookings from Momence into SQLite once a week, and a Next.js dashboard turns them into
-answers: who comes, how often, who stopped coming, who is reliable, and how each studio is
-doing. The goal is to learn riders' names and look after the community.
+answers: who comes, how often, who stopped cominge, and how each studio is
+doing.
 
 Everything runs on my laptop. Customer data stays in a git-ignored `data/` folder and never
 leaves the machine.
