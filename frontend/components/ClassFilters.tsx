@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ALL_TIME } from "@/lib/format";
 import { applyClassFilters, type ClassFilterState, type Filterable } from "@/lib/filters";
 import DateRangeFilter from "@/components/DateRangeFilter";
@@ -24,6 +24,7 @@ export default function ClassFilters({
   today,
   shown,
   total,
+  children,
 }: {
   filters: ClassFilterState;
   onChange: (f: ClassFilterState) => void;
@@ -31,6 +32,7 @@ export default function ClassFilters({
   today: string;
   shown: number;
   total: number;
+  children?: ReactNode; // extra controls at the end of the bar
 }) {
   return (
     <div
@@ -69,6 +71,7 @@ export default function ClassFilters({
         onChange={(range) => onChange({ ...filters, range })}
         today={today}
       />
+      {children}
       <span
         style={{
           fontFamily: "var(--font-mono)",

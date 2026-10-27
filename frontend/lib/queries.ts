@@ -85,6 +85,26 @@ export function getLocations(): string[] {
   }
 }
 
+export interface RiderOption {
+  member_id: number;
+  name: string;
+}
+
+/** Every rider with at least one booking, for the rider search. */
+export function getRiders(): RiderOption[] {
+  try {
+    return getDb()
+      .prepare(
+        `SELECT cu.member_id, cu.name FROM customers cu
+         WHERE EXISTS (SELECT 1 FROM signups s WHERE s.member_id = cu.member_id)
+         ORDER BY cu.name`,
+      )
+      .all() as RiderOption[];
+  } catch {
+    return [];
+  }
+}
+
 /** Ranked by attended. With a location, only visits at that studio count. */
 export function getTopRegulars(limit = 50, location: string | null = null): TopRegular[] {
   try {

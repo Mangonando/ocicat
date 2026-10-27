@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { markInAppNavigation } from "@/components/BackLink";
 
 const NAV = [
   { href: "/", label: "Overview" },
@@ -15,6 +17,10 @@ const NAV = [
 
 export default function NavLinks() {
   const pathname = usePathname();
+  const firstPath = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== firstPath.current) markInAppNavigation();
+  }, [pathname]);
 
   return (
     <nav aria-label="Main navigation">

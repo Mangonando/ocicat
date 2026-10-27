@@ -1,10 +1,11 @@
 import { connection } from "next/server";
-import { getLocations, getRiderStats, getUpcomingMemberIds, type RiderStat } from "@/lib/queries";
+import { getLocations, getRiders, getRiderStats, getUpcomingMemberIds, type RiderStat } from "@/lib/queries";
 import { locationParam } from "@/lib/filters";
 import { isLapsed, isOneAndDone } from "@/lib/tiers";
 import { berlinToday } from "@/lib/format";
 import RiderName, { BookedLegend } from "@/components/RiderName";
 import LocationSelect from "@/components/LocationSelect";
+import RiderSearch from "@/components/RiderSearch";
 import { Page, PageHeader, SectionTitle } from "@/components/ui";
 
 export const metadata = { title: "Lapsed — riders analytics" };
@@ -33,8 +34,9 @@ export default async function LapsedPage({
         {location &&
           `Visits at ${location} only: riders here may still ride at another studio (see Fav location).`}
       </PageHeader>
-      <div style={{ marginBottom: "1rem" }}>
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap", marginBottom: "1rem" }}>
         <LocationSelect locations={locations} value={location ?? ""} />
+        <RiderSearch riders={getRiders()} />
       </div>
       <BookedLegend />
 

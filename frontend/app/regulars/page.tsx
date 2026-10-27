@@ -1,9 +1,10 @@
 import { connection } from "next/server";
-import { getLocations, getTopRegulars, getUpcomingMemberIds } from "@/lib/queries";
+import { getLocations, getRiders, getTopRegulars, getUpcomingMemberIds } from "@/lib/queries";
 import { berlinToday, WEEKDAYS } from "@/lib/format";
 import { locationParam } from "@/lib/filters";
 import RiderName, { BookedLegend } from "@/components/RiderName";
 import LocationSelect from "@/components/LocationSelect";
+import RiderSearch from "@/components/RiderSearch";
 import { Page, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Top regulars — riders analytics" };
@@ -33,6 +34,7 @@ export default async function RegularsPage({
 
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap", marginBottom: "1rem" }}>
         <LocationSelect locations={locations} value={location ?? ""} />
+        <RiderSearch riders={getRiders()} />
       </div>
       <BookedLegend />
 

@@ -4,7 +4,7 @@ import { berlinToday, WEEKDAYS } from "@/lib/format";
 import { OUTCOMES, OUTCOME_BY_KEY, outcomeOf, zeroCounts } from "@/lib/outcomes";
 import { studioShort } from "@/lib/studios";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import { Legend, Page, PageHeader, SectionTitle, Swatch } from "@/components/ui";
 
 // Reads the database and "today" on every request, so navigation may wait for the server.
@@ -39,20 +39,7 @@ export default async function CustomerPage({
 
   return (
     <Page width="52rem">
-      <Link
-        href="/regulars"
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "var(--text-xs)",
-          color: "var(--color-ink)",
-          opacity: 0.55,
-          textDecoration: "none",
-          display: "inline-block",
-          marginBottom: "1rem",
-        }}
-      >
-        ← Back to regulars
-      </Link>
+      <BackLink />
 
       <PageHeader title={stat.name}>
         First visit: {stat.first_visit ?? "—"} · Last visit: {stat.last_visit ?? "—"}

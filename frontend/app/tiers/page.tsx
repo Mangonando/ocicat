@@ -1,10 +1,11 @@
 import { connection } from "next/server";
-import { getLocations, getRiderStats, getUpcomingMemberIds } from "@/lib/queries";
+import { getLocations, getRiders, getRiderStats, getUpcomingMemberIds } from "@/lib/queries";
 import { locationParam } from "@/lib/filters";
 import { getTier, TIERS } from "@/lib/tiers";
 import { berlinToday } from "@/lib/format";
 import RiderName, { BookedLegend } from "@/components/RiderName";
 import LocationSelect from "@/components/LocationSelect";
+import RiderSearch from "@/components/RiderSearch";
 import { EmptyState, Page, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Cadence — riders analytics" };
@@ -40,8 +41,9 @@ export default async function TiersPage({
           ? `${total} riders, grouped by how many classes they have attended at ${location}. Counts and dates only include that studio.`
           : `${total} riders, grouped by how many classes they have attended.`}
       </PageHeader>
-      <div style={{ marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap", marginBottom: "1.5rem" }}>
         <LocationSelect locations={locations} value={location ?? ""} />
+        <RiderSearch riders={getRiders()} />
       </div>
 
       {/* Proportional tier bar */}

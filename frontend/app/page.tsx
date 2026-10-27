@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { getClassAttendance } from "@/lib/queries";
+import { getClassAttendance, getRiders } from "@/lib/queries";
 import { berlinToday } from "@/lib/format";
 import OverviewDashboard from "@/components/OverviewDashboard";
 import { EmptyState, Page } from "@/components/ui";
@@ -19,7 +19,7 @@ export default async function Home() {
 
   return (
     <Page>
-      <OverviewDashboard rows={classes} today={berlinToday()} />
+      <OverviewDashboard rows={classes} riders={getRiders()} today={berlinToday()} />
     </Page>
   );
 }

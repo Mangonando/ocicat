@@ -1,21 +1,23 @@
 "use client";
 
 import { useMemo } from "react";
-import type { ClassAttendance } from "@/lib/queries";
+import type { ClassAttendance, RiderOption } from "@/lib/queries";
 import { summarize } from "@/lib/overview";
 import { outcomeSlices } from "@/lib/outcomes";
 import { fmt, fmtPct, rangeLabel } from "@/lib/format";
 import DonutChart from "@/components/DonutChart";
 import AttendanceTable from "@/components/AttendanceTable";
 import ClassFilters, { useClassFilters } from "@/components/ClassFilters";
+import RiderSearch from "@/components/RiderSearch";
 
 interface Props {
   rows: ClassAttendance[];
+  riders: RiderOption[];
   today: string;
 }
 
 /** Overview page body: the filters drive the tiles, the donut and the table together. */
-export default function OverviewDashboard({ rows, today }: Props) {
+export default function OverviewDashboard({ rows, riders, today }: Props) {
   const { filters, setFilters, filtered } = useClassFilters(rows);
 
   const locations = useMemo(
@@ -51,7 +53,9 @@ export default function OverviewDashboard({ rows, today }: Props) {
         today={today}
         shown={filtered.length}
         total={rows.length}
-      />
+      >
+        <RiderSearch riders={riders} />
+      </ClassFilters>
 
       {/* Summary strip */}
       <div

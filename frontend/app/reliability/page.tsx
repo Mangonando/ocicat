@@ -1,10 +1,11 @@
 import { connection } from "next/server";
-import { getLocations, getReliabilityStats, getUpcomingMemberIds } from "@/lib/queries";
+import { getLocations, getReliabilityStats, getRiders, getUpcomingMemberIds } from "@/lib/queries";
 import { locationParam } from "@/lib/filters";
 import { berlinToday } from "@/lib/format";
 import { OUTCOMES, totalOf } from "@/lib/outcomes";
 import { BookedLegend } from "@/components/RiderName";
 import LocationSelect from "@/components/LocationSelect";
+import RiderSearch from "@/components/RiderSearch";
 import ReliabilityTable, { type ReliabilityEntry } from "@/components/ReliabilityTable";
 import { EmptyState, Legend, Page, PageHeader, Swatch } from "@/components/ui";
 
@@ -43,8 +44,9 @@ export default async function ReliabilityPage({
         a column to sort.
         {location && ` Only bookings for ${location} classes count.`}
       </PageHeader>
-      <div style={{ marginBottom: "1rem" }}>
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap", marginBottom: "1rem" }}>
         <LocationSelect locations={locations} value={location ?? ""} />
+        <RiderSearch riders={getRiders()} />
       </div>
       <Legend style={{ marginBottom: "0.5rem" }}>
         {OUTCOMES.map((o) => (
