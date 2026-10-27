@@ -203,7 +203,7 @@ export function getSummaryStats(): SummaryStats | null {
         .prepare(
           `SELECT
             COUNT(DISTINCT c.id)                                                AS total_classes,
-            COUNT(s.id)                                                         AS total_bookings,
+            COUNT(s.booking_id)                                                 AS total_bookings,
             SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)           AS total_attended,
             SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)           AS total_no_shows,
             SUM(CASE WHEN s.status = 'cancelled'  THEN 1 ELSE 0 END)           AS total_cancelled,
@@ -304,7 +304,7 @@ export function getClassAttendance(limit = 200): ClassAttendance[] {
           c.local_date,
           c.local_time,
           c.location,
-          COUNT(s.id)                                                               AS total_bookings,
+          COUNT(s.booking_id)                                                       AS total_bookings,
           SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)                 AS check_ins,
           SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)                 AS no_shows,
           SUM(CASE WHEN s.status = 'cancelled'  THEN 1 ELSE 0 END)                 AS cancellations,
