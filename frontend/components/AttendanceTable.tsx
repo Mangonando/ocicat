@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import type { ClassAttendance } from "@/lib/queries";
 import { fmtPct } from "@/lib/format";
+import { compareValues, useSort } from "@/components/useSort";
 
 interface Props {
   rows: ClassAttendance[];
@@ -16,9 +17,9 @@ const COLUMNS: [SortKey, string][] = [
   ["name", "Class"],
   ["location", "Location"],
   ["total_bookings", "Bookings"],
-  ["check_ins", "Check-ins"],
+  ["checked_in", "Check-ins"],
   ["no_shows", "No-shows"],
-  ["cancellations", "Cancelled"],
+  ["cancelled", "Cancelled"],
   ["late_cancels", "Late cancel"],
   ["attendance_rate", "Check-in rate"],
   ["cancel_rate", "Cancel rate"],
@@ -26,29 +27,12 @@ const COLUMNS: [SortKey, string][] = [
 
 /** Sortable class table. Filtering happens in the parent so the whole page follows it. */
 export default function AttendanceTable({ rows }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey>("local_date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const sort = useSort<SortKey>("local_date");
 
   const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const av = a[sortKey] ?? "";
-      const bv = b[sortKey] ?? "";
-      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-  }, [rows, sortKey, sortDir]);
-
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-  }
-
-  const arrow = (key: SortKey) =>
-    sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "";
+    const sign = sort.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => sign * compareValues(a[sort.key], b[sort.key]));
+  }, [rows, sort.key, sort.dir]);
 
   if (sorted.length === 0) {
     return (
@@ -63,22 +47,7 @@ export default function AttendanceTable({ rows }: Props) {
       <table className="data-table">
         <thead>
           <tr>
-            {COLUMNS.map(([key, label]) => (
-              <th
-                key={key}
-                onClick={() => handleSort(key)}
-                style={{ cursor: "pointer", userSelect: "none" }}
-                aria-sort={
-                  sortKey === key
-                    ? sortDir === "asc"
-                      ? "ascending"
-                      : "descending"
-                    : "none"
-                }
-              >
-                {label}{arrow(key)}
-              </th>
-            ))}
+            {COLUMNS.map(([key, label]) => sort.th(key, label))}
           </tr>
         </thead>
         <tbody>
@@ -87,19 +56,19 @@ export default function AttendanceTable({ rows }: Props) {
               && (r.no_shows / r.total_bookings) > 0.2;
             const rate = r.attendance_rate;
             return (
-              <tr key={r.id} className="table-row-alt">
+              <tr key={r.id}>
                 <td className="col-muted" style={{ whiteSpace: "nowrap" }}>{r.local_date}</td>
                 <td className="col-muted">{r.local_time.slice(0, 5)}</td>
                 <td className="col-name">{r.name}</td>
                 <td className="col-muted">{r.location ?? "—"}</td>
                 <td className="col-number">{r.total_bookings}</td>
-                <td className="col-number" style={{ fontWeight: 500 }}>{r.check_ins}</td>
+                <td className="col-number" style={{ fontWeight: 500 }}>{r.checked_in}</td>
                 <td
                   className={`col-number${highNoShow ? " col-alert" : ""}`}
                 >
                   {r.no_shows}
                 </td>
-                <td className="col-number col-muted">{r.cancellations}</td>
+                <td className="col-number col-muted">{r.cancelled}</td>
                 <td className="col-number col-muted">{r.late_cancels}</td>
                 <td
                   className="col-number"

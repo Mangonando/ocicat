@@ -9,8 +9,6 @@ export const TIERS = [
 
 export type Tier = (typeof TIERS)[number];
 
-export const TIER_LABELS = TIERS.map((t) => t.label);
-
 export function getTier(attended: number): Tier {
   return (
     TIERS.find(

@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { getClassAttendance } from "@/lib/queries";
 import { berlinToday } from "@/lib/format";
 import OverviewDashboard from "@/components/OverviewDashboard";
+import { EmptyState, Page } from "@/components/ui";
 
 export const metadata = { title: "riders analytics" };
 
@@ -13,28 +14,12 @@ export default async function Home() {
   const classes = getClassAttendance();
 
   if (classes.length === 0) {
-    return (
-      <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "var(--text-xl)",
-            marginBottom: "1rem",
-          }}
-        >
-          No data yet
-        </h1>
-        <p style={{ opacity: 0.6 }}>
-          Run <code style={{ fontFamily: "var(--font-mono)" }}>python scrape.py</code> to
-          populate the database.
-        </p>
-      </div>
-    );
+    return <EmptyState title="Overview" />;
   }
 
   return (
-    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
+    <Page>
       <OverviewDashboard rows={classes} today={berlinToday()} />
-    </div>
+    </Page>
   );
 }

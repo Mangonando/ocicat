@@ -1,7 +1,9 @@
+import { connection } from "next/server";
 import { getAllCustomerStats, getUpcomingMemberIds } from "@/lib/queries";
 import { isLapsed, isOneAndDone } from "@/lib/tiers";
 import { berlinToday } from "@/lib/format";
 import RiderName, { BookedLegend } from "@/components/RiderName";
+import { Page, PageHeader, SectionTitle } from "@/components/ui";
 
 export const metadata = { title: "Lapsed — riders analytics" };
 
@@ -9,7 +11,6 @@ export const metadata = { title: "Lapsed — riders analytics" };
 export const instant = false;
 
 export default async function LapsedPage() {
-  const { connection } = await import("next/server");
   await connection();
 
   const stats = getAllCustomerStats();
@@ -19,39 +20,14 @@ export default async function LapsedPage() {
   const lapsed = stats.filter((s) => isLapsed(s.attended, s.last_visit, today));
 
   return (
-    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
-      <h1
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "var(--text-xl)",
-          letterSpacing: "-0.01em",
-          marginBottom: "1rem",
-        }}
-      >
-        Lapsed riders
-      </h1>
+    <Page>
+      <PageHeader title="Lapsed riders" />
       <BookedLegend />
 
       <section style={{ marginBottom: "2.5rem" }}>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "var(--text-lg)",
-            marginBottom: "0.25rem",
-          }}
-        >
-          One-and-done{" "}
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--text-base)",
-              opacity: 0.55,
-              fontWeight: 400,
-            }}
-          >
-            ({oneAndDone.length})
-          </span>
-        </h2>
+        <SectionTitle count={oneAndDone.length} style={{ marginBottom: "0.25rem" }}>
+          One-and-done
+        </SectionTitle>
         <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "1rem" }}>
           Came 1–2×, last visit more than 30 days ago.
         </p>
@@ -65,25 +41,9 @@ export default async function LapsedPage() {
       </section>
 
       <section>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "var(--text-lg)",
-            marginBottom: "0.25rem",
-          }}
-        >
-          Lapsed{" "}
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--text-base)",
-              opacity: 0.55,
-              fontWeight: 400,
-            }}
-          >
-            ({lapsed.length})
-          </span>
-        </h2>
+        <SectionTitle count={lapsed.length} style={{ marginBottom: "0.25rem" }}>
+          Lapsed
+        </SectionTitle>
         <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "1rem" }}>
           5+ visits but absent more than 28 days.
         </p>
@@ -95,7 +55,7 @@ export default async function LapsedPage() {
           <CustomerTable rows={lapsed} booked={booked} />
         )}
       </section>
-    </div>
+    </Page>
   );
 }
 
@@ -119,7 +79,7 @@ function CustomerTable({
         </thead>
         <tbody>
           {rows.map((c) => (
-            <tr key={c.member_id} className="table-row-alt">
+            <tr key={c.member_id}>
               <td className="col-name">
                 <RiderName memberId={c.member_id} name={c.name} booked={booked.has(c.member_id)} />
               </td>

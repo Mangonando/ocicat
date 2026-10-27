@@ -20,6 +20,8 @@ export function berlinToday(now = new Date()): string {
   return now.toLocaleDateString("sv", { timeZone: "Europe/Berlin" }).slice(0, 10);
 }
 
+export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // 0 = Monday, as in the DB
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** "2026-10-05" → "5 Oct" */

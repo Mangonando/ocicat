@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# riders dashboard (frontend)
 
-## Getting Started
-
-First, run the development server:
+Local Next.js dashboard for the ride class attendance data. It reads `../data/ride.db`
+(read-only, via `better-sqlite3`) in server components; there is no API call in between.
+Override the path with `DB_PATH=/path/to/ride.db`.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000  (Node 20, see .nvmrc)
+npm test           # Vitest
+npx tsc --noEmit && npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Layout
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Path | What |
+|------|------|
+| `app/` | One folder per page: Overview (`page.tsx`), Upcoming, Cadence (`tiers/`), Regulars, Lapsed, Reliability, Locations, rider detail (`customers/[id]`) |
+| `components/` | Client dashboards (`OverviewDashboard`, `LocationsDashboard`), charts, tables, filters, and shared layout pieces in `ui.tsx` |
+| `lib/queries.ts` | All SQL (parameterized). Everything else in `lib/` is pure and unit-tested |
+| `lib/outcomes.ts` | Booking outcomes (attended, no-show, cancelled, late cancel): colours, shares, donut slices |
+| `app/globals.css` | Design tokens (palette, fonts, shadows) and the few shared classes |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Conventions
 
-## Learn More
+- Colours come from CSS variables in `globals.css`; components never use raw hex values.
+- Pages that depend on "today" call `connection()` and set `export const instant = false`.
+- Real customer names only ever come from the local database; tests use synthetic data.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If styles look out of date after editing `globals.css`, stop the dev server, delete `.next/`
+and start it again (Turbopack can keep a stale copy of the stylesheet).

@@ -20,9 +20,9 @@ function cls(overrides: Partial<ClassAttendance>): ClassAttendance {
     local_time: "19:00",
     location: "Studio A",
     total_bookings: 0,
-    check_ins: 0,
+    checked_in: 0,
     no_shows: 0,
-    cancellations: 0,
+    cancelled: 0,
     late_cancels: 0,
     booked: 0,
     attendance_rate: null,
@@ -58,25 +58,25 @@ describe("format", () => {
 describe("outcomes", () => {
   it("separates late cancels from early cancels", () => {
     expect(outcomeOf("cancelled", 0)).toBe("cancelled");
-    expect(outcomeOf("cancelled", 1)).toBe("late_cancel");
-    expect(outcomeOf("checked_in", 0)).toBe("attended");
+    expect(outcomeOf("cancelled", 1)).toBe("late_cancels");
+    expect(outcomeOf("checked_in", 0)).toBe("checked_in");
     expect(outcomeOf("booked", 0)).toBeNull();
   });
 
   it("shares add up to 100 and missed is everything but attended", () => {
-    const s = outcomeShares({ attended: 6, no_show: 1, cancelled: 2, late_cancel: 1 });
-    expect(s.attended! + s.no_show! + s.cancelled! + s.late_cancel!).toBe(100);
+    const s = outcomeShares({ checked_in: 6, no_shows: 1, cancelled: 2, late_cancels: 1 });
+    expect(s.checked_in! + s.no_shows! + s.cancelled! + s.late_cancels!).toBe(100);
     expect(s.missed).toBe(40);
   });
 
   it("returns null shares when there are no resolved bookings", () => {
-    expect(outcomeShares({ attended: 0, no_show: 0, cancelled: 0, late_cancel: 0 }).missed).toBeNull();
+    expect(outcomeShares({ checked_in: 0, no_shows: 0, cancelled: 0, late_cancels: 0 }).missed).toBeNull();
   });
 });
 
 describe("overview summary", () => {
   const rows = [
-    cls({ id: 1, location: "Studio A", total_bookings: 10, check_ins: 7, no_shows: 1, cancellations: 1, late_cancels: 1, member_ids: [1, 2, 3] }),
+    cls({ id: 1, location: "Studio A", total_bookings: 10, checked_in: 7, no_shows: 1, cancelled: 1, late_cancels: 1, member_ids: [1, 2, 3] }),
     cls({ id: 2, name: "power ride", location: "Studio B", total_bookings: 5, booked: 5, member_ids: [3, 4] }),
   ];
 
@@ -98,7 +98,7 @@ describe("overview summary", () => {
 
   it("bookings equal the sum of every outcome plus still-booked", () => {
     const s = summarize(rows);
-    expect(s.check_ins + s.no_shows + s.cancelled + s.late_cancels + s.booked).toBe(s.bookings);
+    expect(s.checked_in + s.no_shows + s.cancelled + s.late_cancels + s.booked).toBe(s.bookings);
   });
 });
 

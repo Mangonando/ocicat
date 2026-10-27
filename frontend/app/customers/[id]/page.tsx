@@ -1,12 +1,11 @@
 import { connection } from "next/server";
 import { getCustomerStat, getCustomerBookings, type CustomerBooking } from "@/lib/queries";
-import { berlinToday } from "@/lib/format";
-import { OUTCOMES, OUTCOME_BY_KEY, outcomeOf } from "@/lib/outcomes";
+import { berlinToday, WEEKDAYS } from "@/lib/format";
+import { OUTCOMES, OUTCOME_BY_KEY, outcomeOf, zeroCounts } from "@/lib/outcomes";
 import { studioShort } from "@/lib/studios";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+import { Legend, Page, PageHeader, SectionTitle, Swatch } from "@/components/ui";
 
 // Reads the database and "today" on every request, so navigation may wait for the server.
 export const instant = false;
@@ -32,14 +31,14 @@ export default async function CustomerPage({
   const history = bookings.filter((b) => !(b.status === "booked" && b.local_date >= today));
 
   // Counted from the same rows as the history table, so the numbers always match it.
-  const counts = { attended: 0, no_show: 0, cancelled: 0, late_cancel: 0 };
+  const counts = zeroCounts();
   for (const b of history) {
     const outcome = outcomeOf(b.status, b.late_cancel);
     if (outcome) counts[outcome] += 1;
   }
 
   return (
-    <div style={{ maxWidth: "52rem", margin: "0 auto" }}>
+    <Page width="52rem">
       <Link
         href="/regulars"
         style={{
@@ -55,19 +54,9 @@ export default async function CustomerPage({
         ← Back to regulars
       </Link>
 
-      <h1
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "var(--text-xl)",
-          letterSpacing: "-0.01em",
-          marginBottom: "0.375rem",
-        }}
-      >
-        {stat.name}
-      </h1>
-      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
+      <PageHeader title={stat.name}>
         First visit: {stat.first_visit ?? "—"} · Last visit: {stat.last_visit ?? "—"}
-      </p>
+      </PageHeader>
 
       {/* Counts per outcome — the colours double as the legend for the history below */}
       <div
@@ -108,7 +97,7 @@ export default async function CustomerPage({
       </div>
 
       {/* Upcoming bookings */}
-      <SectionTitle title="Upcoming" count={upcoming.length} />
+      <SectionTitle count={upcoming.length}>Upcoming</SectionTitle>
       {upcoming.length === 0 ? (
         <p style={{ opacity: 0.45, fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)", marginBottom: "2.5rem" }}>
           Not booked for any upcoming class.
@@ -127,9 +116,9 @@ export default async function CustomerPage({
             </thead>
             <tbody>
               {upcoming.map((b) => (
-                <tr key={b.booking_id} className="table-row-alt">
+                <tr key={b.booking_id}>
                   <td className="col-muted">{b.local_date}</td>
-                  <td className="col-muted">{DAYS[b.weekday]}</td>
+                  <td className="col-muted">{WEEKDAYS[b.weekday]}</td>
                   <td className="col-muted">{b.local_time.slice(0, 5)}</td>
                   <td className="col-name">
                     <ClassName booking={b} />
@@ -143,29 +132,19 @@ export default async function CustomerPage({
       )}
 
       {/* Booking history: every outcome, not just attendances */}
-      <SectionTitle title="Booking history" count={history.length} />
+      <SectionTitle count={history.length}>Booking history</SectionTitle>
       <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "0.5rem" }}>
-        {counts.attended} attended · {counts.no_show} no-show{counts.no_show !== 1 ? "s" : ""} ·{" "}
-        {counts.cancelled} cancelled · {counts.late_cancel} late cancel{counts.late_cancel !== 1 ? "s" : ""}
+        {counts.checked_in} attended · {counts.no_shows} no-show{counts.no_shows !== 1 ? "s" : ""} ·{" "}
+        {counts.cancelled} cancelled · {counts.late_cancels} late cancel{counts.late_cancels !== 1 ? "s" : ""}
       </p>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "0.5rem 1.25rem",
-          fontFamily: "var(--font-mono)",
-          fontSize: "var(--text-xs)",
-          marginBottom: "0.75rem",
-        }}
-      >
-        {OUTCOMES.filter((o) => o.key !== "attended").map((o) => (
-          <span key={o.key} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-            <span className="swatch" style={{ backgroundColor: o.color }} />
+      <Legend style={{ marginBottom: "0.75rem" }}>
+        {OUTCOMES.filter((o) => o.key !== "checked_in").map((o) => (
+          <Swatch key={o.key} color={o.color}>
             {o.label}
-          </span>
+          </Swatch>
         ))}
         <span style={{ opacity: 0.6 }}>Unmarked rows = attended</span>
-      </div>
+      </Legend>
 
       {history.length === 0 ? (
         <p style={{ opacity: 0.45, fontFamily: "var(--font-mono)" }}>No bookings on record.</p>
@@ -184,20 +163,20 @@ export default async function CustomerPage({
             <tbody>
               {history.map((b) => {
                 const outcome = outcomeOf(b.status, b.late_cancel);
-                const color = outcome && outcome !== "attended" ? OUTCOME_BY_KEY[outcome].color : null;
+                const color = outcome && outcome !== "checked_in" ? OUTCOME_BY_KEY[outcome].color : null;
                 const cellStyle = color
                   ? { backgroundColor: `color-mix(in srgb, ${color} 35%, var(--color-apricot))` }
                   : undefined;
                 return (
-                  <tr key={b.booking_id} className={color ? undefined : "table-row-alt"}>
+                  <tr key={b.booking_id}>
                     <td className="col-muted" style={cellStyle}>{b.local_date}</td>
-                    <td className="col-muted" style={cellStyle}>{DAYS[b.weekday]}</td>
+                    <td className="col-muted" style={cellStyle}>{WEEKDAYS[b.weekday]}</td>
                     <td className="col-name" style={cellStyle}>
                       <ClassName booking={b} />
                     </td>
                     <td className="col-muted" style={cellStyle}>{studioShort(b.location)}</td>
                     <td style={cellStyle}>
-                      {outcome === "attended" || outcome == null ? (
+                      {outcome === "checked_in" || outcome == null ? (
                         <span style={{ fontSize: "var(--text-xs)", opacity: 0.6 }}>
                           {outcome == null ? "Booked" : "Attended"}
                         </span>
@@ -225,24 +204,7 @@ export default async function CustomerPage({
           </table>
         </div>
       )}
-    </div>
-  );
-}
-
-function SectionTitle({ title, count }: { title: string; count: number }) {
-  return (
-    <h2
-      style={{
-        fontFamily: "var(--font-display)",
-        fontSize: "var(--text-lg)",
-        marginBottom: "0.75rem",
-      }}
-    >
-      {title}{" "}
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-base)", opacity: 0.5, fontWeight: 400 }}>
-        ({count})
-      </span>
-    </h2>
+    </Page>
   );
 }
 

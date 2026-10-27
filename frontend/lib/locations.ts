@@ -1,4 +1,4 @@
-import type { Counts } from "./queries";
+import { zeroCounts, type Counts } from "./outcomes";
 
 // Everything on the Locations page is computed from one list of past classes,
 // so the page filters (class name, location, dates) apply to every chart.
@@ -31,8 +31,6 @@ export interface SlotPoint {
   avg_per_class: number;
 }
 
-const zero = (): Counts => ({ checked_in: 0, no_shows: 0, cancelled: 0, late_cancels: 0 });
-
 function add(into: Counts, c: Counts): void {
   into.checked_in += c.checked_in;
   into.no_shows += c.no_shows;
@@ -47,7 +45,7 @@ export function avgPerClass(checkIns: number, classes: number): number | null {
 export function summarizeByLocation(rows: PastClass[]): LocationSummary[] {
   const map = new Map<string, Counts & { classes: number }>();
   for (const r of rows) {
-    const s = map.get(r.location) ?? { ...zero(), classes: 0 };
+    const s = map.get(r.location) ?? { ...zeroCounts(), classes: 0 };
     s.classes += 1;
     add(s, r);
     map.set(r.location, s);
@@ -62,7 +60,7 @@ export function monthlyByLocation(rows: PastClass[]): MonthlyLocation[] {
   for (const r of rows) {
     const month = r.local_date.slice(0, 7);
     const key = `${month}|${r.location}`;
-    const m = map.get(key) ?? { location: r.location, month, classes: 0, ...zero() };
+    const m = map.get(key) ?? { location: r.location, month, classes: 0, ...zeroCounts() };
     m.classes += 1;
     add(m, r);
     map.set(key, m);

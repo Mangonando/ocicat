@@ -53,18 +53,9 @@
   /* Table row alternation — apricot base + faint vistaBlue tint */
   --color-row-alt: color-mix(in srgb, var(--color-apricot) 88%, var(--color-vista-blue) 12%);
 
-  /* Surface overlays */
-  --color-surface-ink: color-mix(in srgb, var(--color-ink) 92%, var(--color-apricot) 8%);
-
   /* Hard-offset shadows — ink-coloured, no blur */
   --shadow-sm: 3px 3px 0 var(--color-ink);
   --shadow-md: 5px 5px 0 var(--color-ink);
-  --shadow-lg: 8px 8px 0 var(--color-ink);
-
-  /* Chart series */
-  --chart-1: var(--color-chartreuse);
-  --chart-2: var(--color-vista-blue);
-  --chart-3: var(--color-tomato);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -88,15 +79,10 @@ body {
 
 /* ─────────────────────────────────────────────────────────────
    UTILITY CLASSES
-   (shadow, button, card, table) — defined here once, used as
+   (cards) — defined here once, used as
    className strings in components without raw values.
    ───────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* Hard-offset shadows */
-  .shadow-hard-sm { box-shadow: var(--shadow-sm); }
-  .shadow-hard-md { box-shadow: var(--shadow-md); }
-  .shadow-hard-lg { box-shadow: var(--shadow-lg); }
-
   /* Card surface: Vista Blue bg + ink border + hard shadow */
   .card {
     background-color: var(--color-vista-blue);
@@ -111,75 +97,6 @@ body {
     border-radius: var(--radius);
     box-shadow: var(--shadow-md);
   }
-
-  /* Table row alternation */
-  .table-row-alt:nth-child(even) td {
-    background-color: var(--color-row-alt);
-  }
-
-  /* No-show alert cell */
-  .cell-alert {
-    color: var(--color-tomato);
-    font-weight: 500;
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────
-   BUTTON SYSTEM
-   ───────────────────────────────────────────────────────────── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: 2px solid var(--color-ink);
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
-  white-space: nowrap;
-}
-
-.btn-primary {
-  background-color: var(--color-chartreuse);
-  color: var(--color-ink);
-  box-shadow: var(--shadow-sm);
-}
-.btn-primary:hover {
-  transform: translate(-3px, -3px);
-  box-shadow: none;
-}
-.btn-primary:focus-visible {
-  outline: 3px solid var(--color-vista-blue);
-  outline-offset: 2px;
-}
-
-.btn-secondary {
-  background-color: transparent;
-  color: var(--color-ink);
-  box-shadow: var(--shadow-sm);
-}
-.btn-secondary:hover {
-  background-color: var(--color-vista-blue);
-  transform: translate(-2px, -2px);
-  box-shadow: none;
-}
-.btn-secondary:focus-visible {
-  outline: 3px solid var(--color-chartreuse);
-  outline-offset: 2px;
-}
-
-.btn-destructive {
-  background-color: var(--color-tomato);
-  color: var(--color-ink);
-  box-shadow: var(--shadow-sm);
-}
-.btn-destructive:hover {
-  transform: translate(-3px, -3px);
-  box-shadow: none;
 }
 
 /* ─────────────────────────────────────────────────────────────

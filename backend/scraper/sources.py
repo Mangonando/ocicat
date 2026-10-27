@@ -2,6 +2,7 @@
 
 import json
 import time
+from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
 from config import BASE, DASHBOARD_URL, PROFILE_DIR
@@ -44,8 +45,12 @@ class LiveSource:
         return r.json()
 
     def close(self):
+        """Safe to call more than once."""
+        if self._pw is None:
+            return
         self.ctx.close()
         self._pw.stop()
+        self._pw = None
 
 
 class HarSource:
@@ -54,12 +59,11 @@ class HarSource:
     def __init__(self, *har_paths):
         self.by_path = {}
         for p in har_paths:
-            for e in json.load(open(p))["log"]["entries"]:
+            for e in json.loads(Path(p).read_text())["log"]["entries"]:
                 text = e["response"]["content"].get("text")
                 if text and "/_api/" in e["request"]["url"]:
                     u = urlsplit(e["request"]["url"])
-                    q = e["request"]["url"].split("?", 1)[1] if "?" in e["request"]["url"] else ""
-                    self.by_path.setdefault(u.path[len("/_api") :], []).append((q, text))
+                    self.by_path.setdefault(u.path[len("/_api") :], []).append((u.query, text))
 
     def get(self, path, params=None):
         hits = self.by_path.get(path)

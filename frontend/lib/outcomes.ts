@@ -1,12 +1,20 @@
 // How a booking ended. "cancelled" means an early cancel only; late cancels are
 // counted separately, so the four outcomes never overlap and add up to 100%.
-export type Outcome = "attended" | "no_show" | "cancelled" | "late_cancel";
+// The keys match the column names the queries return.
+export interface Counts {
+  checked_in: number;
+  no_shows: number;
+  cancelled: number;
+  late_cancels: number;
+}
 
-export const OUTCOMES: { key: Outcome; label: string; color: string }[] = [
-  { key: "attended", label: "Attended", color: "var(--color-status-attended)" },
-  { key: "no_show", label: "No-show", color: "var(--color-status-no-show)" },
-  { key: "cancelled", label: "Cancelled", color: "var(--color-status-cancelled)" },
-  { key: "late_cancel", label: "Late cancel", color: "var(--color-status-late-cancel)" },
+export type Outcome = keyof Counts;
+
+export const OUTCOMES: { key: Outcome; label: string; plural: string; color: string }[] = [
+  { key: "checked_in", label: "Attended", plural: "Check-ins", color: "var(--color-status-attended)" },
+  { key: "no_shows", label: "No-show", plural: "No-shows", color: "var(--color-status-no-show)" },
+  { key: "cancelled", label: "Cancelled", plural: "Cancelled", color: "var(--color-status-cancelled)" },
+  { key: "late_cancels", label: "Late cancel", plural: "Late cancels", color: "var(--color-status-late-cancel)" },
 ];
 
 export const OUTCOME_BY_KEY = Object.fromEntries(OUTCOMES.map((o) => [o.key, o])) as Record<
@@ -14,31 +22,36 @@ export const OUTCOME_BY_KEY = Object.fromEntries(OUTCOMES.map((o) => [o.key, o])
   (typeof OUTCOMES)[number]
 >;
 
-export function outcomeOf(status: string, lateCancel: number): Outcome | null {
-  if (status === "checked_in") return "attended";
-  if (status === "no_show") return "no_show";
-  if (status === "cancelled") return lateCancel ? "late_cancel" : "cancelled";
-  return null; // still booked: not resolved yet
+export const zeroCounts = (): Counts => ({ checked_in: 0, no_shows: 0, cancelled: 0, late_cancels: 0 });
+
+export function totalOf(c: Counts): number {
+  return c.checked_in + c.no_shows + c.cancelled + c.late_cancels;
 }
 
-export interface OutcomeCounts {
-  attended: number;
-  no_show: number;
-  cancelled: number;
-  late_cancel: number;
+/** Which outcome a signup row has, or null while it is still booked. */
+export function outcomeOf(status: string, lateCancel: number): Outcome | null {
+  if (status === "checked_in") return "checked_in";
+  if (status === "no_show") return "no_shows";
+  if (status === "cancelled") return lateCancel ? "late_cancels" : "cancelled";
+  return null;
 }
 
 export type OutcomeShares = Record<Outcome | "missed", number | null>;
 
-/** Each outcome as a whole-number % of resolved bookings; missed = everything but attended. */
-export function outcomeShares(c: OutcomeCounts): OutcomeShares {
-  const total = c.attended + c.no_show + c.cancelled + c.late_cancel;
+/** Each outcome as a % of resolved bookings (one decimal); missed = everything but attended. */
+export function outcomeShares(c: Counts): OutcomeShares {
+  const total = totalOf(c);
   const share = (n: number) => (total > 0 ? Math.round((1000 * n) / total) / 10 : null);
   return {
-    attended: share(c.attended),
-    no_show: share(c.no_show),
+    checked_in: share(c.checked_in),
+    no_shows: share(c.no_shows),
     cancelled: share(c.cancelled),
-    late_cancel: share(c.late_cancel),
-    missed: share(c.no_show + c.cancelled + c.late_cancel),
+    late_cancels: share(c.late_cancels),
+    missed: share(c.no_shows + c.cancelled + c.late_cancels),
   };
+}
+
+/** Donut slices for the four outcomes, in the shared outcome colours. */
+export function outcomeSlices(c: Counts) {
+  return OUTCOMES.map((o) => ({ label: o.plural, value: c[o.key], color: o.color }));
 }

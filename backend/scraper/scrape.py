@@ -6,14 +6,17 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from config import DB_PATH, DEFAULT_LOOKAHEAD_DAYS, DEFAULT_LOOKBACK_DAYS, HOST_ID, ROOT, TEACHER_ID, TZ
+from backup import backup
+from config import DB_PATH, DEFAULT_LOOKAHEAD_DAYS, DEFAULT_LOOKBACK_DAYS, HOST_ID, TEACHER_ID, TZ
 from migrate import run as run_migrations
 from sources import AuthError, HarSource, LiveSource
 
 PAGE = 20
 SKIP_IF_RAN_WITHIN_DAYS = 6
+SCHEMA = Path(__file__).parent / "schema.sql"
 
 
 def now_iso():
@@ -23,7 +26,7 @@ def now_iso():
 def connect():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB_PATH)
-    db.executescript((ROOT / "backend" / "scraper" / "schema.sql").read_text())
+    db.executescript(SCHEMA.read_text())
     run_migrations(db)
     return db
 
@@ -217,8 +220,6 @@ def main():
         )
         db.commit()
         print(f"Done: {n_classes} classes, {n_signups} bookings.")
-        from backup import backup
-
         backup()
     except AuthError as e:
         db.execute("UPDATE runs SET finished_at=?, ok=0, note=? WHERE id=?", (now_iso(), str(e), run_id))
@@ -226,7 +227,7 @@ def main():
         src.close()  # must close before starting a new Playwright instance
         print(f"Auth error: {e} — attempting re-login...")
         try:
-            from login import login as do_login
+            from login import login as do_login  # lazy: login.py needs .env credentials at import
 
             do_login()
             notify("ride analytics: re-logged in — next scheduled run will work")
@@ -236,10 +237,7 @@ def main():
             print(f"Re-login failed: {login_err}")
         sys.exit(1)
     finally:
-        try:
-            src.close()
-        except Exception:
-            pass  # already closed in AuthError handler
+        src.close()  # no-op if already closed in the AuthError handler
 
 
 if __name__ == "__main__":

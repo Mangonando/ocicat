@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Counts } from "@/lib/queries";
 import { fmt, monthLabel, rangeLabel } from "@/lib/format";
-import { outcomeShares } from "@/lib/outcomes";
+import { outcomeShares, outcomeSlices, zeroCounts, type Counts } from "@/lib/outcomes";
 import { studioColor, studioShort } from "@/lib/studios";
 import {
   avgPerClass,
@@ -18,31 +17,7 @@ import TrendChart from "@/components/TrendChart";
 import WeeklyLineChart from "@/components/WeeklyLineChart";
 import SlotBarChart from "@/components/SlotBarChart";
 import DonutChart from "@/components/DonutChart";
-
-const ZERO: Counts = { checked_in: 0, no_shows: 0, cancelled: 0, late_cancels: 0 };
-
-function sharesOf(c: Counts) {
-  return outcomeShares({
-    attended: c.checked_in,
-    no_show: c.no_shows,
-    cancelled: c.cancelled,
-    late_cancel: c.late_cancels,
-  });
-}
-
-const H2 = {
-  fontFamily: "var(--font-display)",
-  fontSize: "var(--text-lg)",
-  marginBottom: "0.75rem",
-} as const;
-
-const NOTE = {
-  marginTop: "0.5rem",
-  fontSize: "0.6875rem",
-  fontFamily: "var(--font-mono)",
-  color: "var(--color-ink)",
-  opacity: 0.55,
-} as const;
+import { NOTE, SectionTitle, Swatch } from "@/components/ui";
 
 interface Props {
   rows: PastClass[]; // all past classes
@@ -93,9 +68,9 @@ export default function LocationsDashboard({ rows, locations: allLocations, toda
         cancelled: acc.cancelled + (c?.cancelled ?? 0),
         late_cancels: acc.late_cancels + (c?.late_cancels ?? 0),
       }),
-      { ...ZERO, classes: 0 },
+      { ...zeroCounts(), classes: 0 },
     );
-    return { month, perLoc, total, shares: sharesOf(total) };
+    return { month, perLoc, total, shares: outcomeShares(total) };
   });
 
   const fmtShare = (v: number | null) => (v != null ? `${Math.round(v)}%` : "—");
@@ -178,23 +153,17 @@ export default function LocationsDashboard({ rows, locations: allLocations, toda
 
           {/* Booking outcomes per studio */}
           <div style={{ marginBottom: "2.5rem" }}>
-            <h2 style={H2}>Booking outcomes by studio</h2>
+            <SectionTitle>Booking outcomes by studio</SectionTitle>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "2.5rem" }}>
               {summaries.map((s) => (
                 <div key={s.location} style={{ maxWidth: "22rem" }}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", fontWeight: 500, marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                    <span className="swatch" style={{ backgroundColor: studioColor(s.location) }} />
-                    {s.location}
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", fontWeight: 500, marginBottom: "0.5rem" }}>
+                    <Swatch color={studioColor(s.location)}>{s.location}</Swatch>
                   </div>
                   <DonutChart
                     size={180}
                     label={`${s.location} booking outcomes`}
-                    slices={[
-                      { label: "Check-ins", value: s.checked_in, color: "var(--color-status-attended)" },
-                      { label: "No-shows", value: s.no_shows, color: "var(--color-status-no-show)" },
-                      { label: "Cancelled", value: s.cancelled, color: "var(--color-status-cancelled)" },
-                      { label: "Late cancels", value: s.late_cancels, color: "var(--color-status-late-cancel)" },
-                    ]}
+                    slices={outcomeSlices(s)}
                   />
                 </div>
               ))}
@@ -203,14 +172,14 @@ export default function LocationsDashboard({ rows, locations: allLocations, toda
 
           {/* Slots */}
           <div style={{ marginBottom: "2.5rem" }}>
-            <h2 style={H2}>Attendance by slot</h2>
+            <SectionTitle>Attendance by slot</SectionTitle>
             <SlotBarChart data={slots} />
-            <p style={NOTE}>Recurring slots only (3+ classes overall), so one-off subs don&apos;t skew the chart.</p>
+            <p style={{ ...NOTE, marginTop: "0.5rem" }}>Recurring slots only (3+ classes overall), so one-off subs don&apos;t skew the chart.</p>
           </div>
 
           {/* Weekly lines per studio */}
           <div style={{ marginBottom: "2.5rem" }}>
-            <h2 style={H2}>Weekly by studio</h2>
+            <SectionTitle>Weekly by studio</SectionTitle>
             <WeeklyLineChart data={filtered} locations={locations} rangeLabel={activeRange} />
           </div>
 
@@ -224,18 +193,18 @@ export default function LocationsDashboard({ rows, locations: allLocations, toda
             }}
           >
             <div>
-              <h2 style={H2}>Monthly check-ins by location</h2>
+              <SectionTitle>Monthly check-ins by location</SectionTitle>
               <TrendChart data={headcountData} locations={locations} />
             </div>
             <div>
-              <h2 style={H2}>Avg check-ins per class</h2>
+              <SectionTitle>Avg check-ins per class</SectionTitle>
               <TrendChart data={avgData} locations={locations} stacked={false} />
-              <p style={NOTE}>Evens out months with more or fewer classes (cancellations, holidays).</p>
+              <p style={{ ...NOTE, marginTop: "0.5rem" }}>Evens out months with more or fewer classes (cancellations, holidays).</p>
             </div>
           </div>
 
           {/* Monthly table */}
-          <h2 style={H2}>Monthly breakdown</h2>
+          <SectionTitle>Monthly breakdown</SectionTitle>
           <div style={{ overflowX: "auto" }}>
             <table className="data-table">
               <thead>
@@ -261,22 +230,22 @@ export default function LocationsDashboard({ rows, locations: allLocations, toda
               </thead>
               <tbody>
                 {tableRows.map(({ month, perLoc, total, shares }) => (
-                  <tr key={month} className="table-row-alt">
+                  <tr key={month}>
                     <td className="col-muted" style={{ whiteSpace: "nowrap" }}>{label(month)}</td>
                     {perLoc.map((c, i) => (
                       <MonthCells key={locations[i]} checkIns={c?.checked_in ?? 0} classes={c?.classes ?? 0} />
                     ))}
                     <MonthCells checkIns={total.checked_in} classes={total.classes} bold />
-                    <td className="col-number" style={{ fontWeight: 500 }}>{fmtShare(shares.attended)}</td>
-                    <td className="col-number col-muted">{fmtShare(shares.no_show)}</td>
+                    <td className="col-number" style={{ fontWeight: 500 }}>{fmtShare(shares.checked_in)}</td>
+                    <td className="col-number col-muted">{fmtShare(shares.no_shows)}</td>
                     <td className="col-number col-muted">{fmtShare(shares.cancelled)}</td>
-                    <td className="col-number col-muted">{fmtShare(shares.late_cancel)}</td>
+                    <td className="col-number col-muted">{fmtShare(shares.late_cancels)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p style={NOTE}>
+          <p style={{ ...NOTE, marginTop: "0.5rem" }}>
             Classes = classes held that month. Avg = check-ins per class. % of bookings: how all bookings
             for that month&apos;s classes ended (adds up to 100%).
           </p>

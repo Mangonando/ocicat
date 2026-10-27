@@ -9,9 +9,9 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { AXIS_LINE, AXIS_TICK, CHART_PANEL, TOOLTIP_STYLE } from "@/lib/chartTheme";
 import type { SlotPoint } from "@/lib/locations";
-
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+import { WEEKDAYS } from "@/lib/format";
 
 interface Props {
   data: SlotPoint[];
@@ -22,7 +22,7 @@ export default function SlotBarChart({ data }: Props) {
 
   const chartData = data.map((s) => ({
     ...s,
-    label: `${DAYS[s.weekday]} ${s.local_time.slice(0, 5)}`,
+    label: `${WEEKDAYS[s.weekday]} ${s.local_time.slice(0, 5)}`,
   }));
 
   const max = Math.max(...chartData.map((d) => d.avg_per_class));
@@ -30,20 +30,14 @@ export default function SlotBarChart({ data }: Props) {
   return (
     <div>
       <div
-        style={{
-          backgroundColor: "var(--color-ink)",
-          border: "2px solid var(--color-ink)",
-          borderRadius: "var(--radius)",
-          padding: "1.25rem 1rem 0.5rem",
-          boxShadow: "var(--shadow-md)",
-        }}
+        style={CHART_PANEL}
       >
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
-              axisLine={{ stroke: "var(--color-apricot)", strokeOpacity: 0.2 }}
+              tick={AXIS_TICK}
+              axisLine={AXIS_LINE}
               tickLine={false}
               interval={0}
               angle={chartData.length > 4 ? -40 : 0}
@@ -51,7 +45,7 @@ export default function SlotBarChart({ data }: Props) {
               height={chartData.length > 4 ? 48 : 24}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
+              tick={AXIS_TICK}
               axisLine={false}
               tickLine={false}
               label={{
@@ -65,14 +59,7 @@ export default function SlotBarChart({ data }: Props) {
               }}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--color-ink)",
-                border: "2px solid var(--color-chartreuse)",
-                borderRadius: "var(--radius)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.75rem",
-                color: "var(--color-apricot)",
-              }}
+              contentStyle={TOOLTIP_STYLE}
               formatter={(val) => [`${val ?? 0} avg/class`]}
               labelStyle={{ color: "var(--color-chartreuse)", fontWeight: 500 }}
               itemStyle={{ color: "var(--color-apricot)" }}

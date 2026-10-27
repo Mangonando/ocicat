@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { ClassAttendance } from "@/lib/queries";
 import { summarize } from "@/lib/overview";
+import { outcomeSlices } from "@/lib/outcomes";
 import { fmt, fmtPct, rangeLabel } from "@/lib/format";
 import DonutChart from "@/components/DonutChart";
 import AttendanceTable from "@/components/AttendanceTable";
@@ -36,10 +37,7 @@ export default function OverviewDashboard({ rows, today }: Props) {
   ];
 
   const donutSlices = [
-    { label: "Check-ins", value: s.check_ins, color: "var(--color-status-attended)" },
-    { label: "No-shows", value: s.no_shows, color: "var(--color-status-no-show)" },
-    { label: "Cancelled", value: s.cancelled, color: "var(--color-status-cancelled)" },
-    { label: "Late cancels", value: s.late_cancels, color: "var(--color-status-late-cancel)" },
+    ...outcomeSlices(s),
     { label: "Booked (upcoming)", value: s.booked, color: "var(--color-status-booked)" },
   ];
 

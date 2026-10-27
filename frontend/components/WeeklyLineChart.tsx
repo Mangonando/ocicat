@@ -10,9 +10,11 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import type { Counts } from "@/lib/queries";
+import { AXIS_LINE, AXIS_TICK, CHART_PANEL, TOOLTIP_STYLE } from "@/lib/chartTheme";
+import type { Counts } from "@/lib/outcomes";
 import { mondayOf, shortDate, weekRange } from "@/lib/format";
 import { studioColor, studioShort } from "@/lib/studios";
+import { Swatch } from "@/components/ui";
 
 interface Props {
   /** Already filtered by the page (class name, location, dates). One row per class or day. */
@@ -84,47 +86,33 @@ export default function WeeklyLineChart({ data, locations, rangeLabel: activeRan
         </div>
         <div style={{ display: "flex", gap: "0.75rem", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)" }}>
           {locations.map((loc) => (
-            <span key={loc} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-              <span className="swatch" style={{ backgroundColor: studioColor(loc) }} />
+            <Swatch key={loc} color={studioColor(loc)}>
               {studioShort(loc)}
-            </span>
+            </Swatch>
           ))}
         </div>
       </div>
 
       <div
-        style={{
-          backgroundColor: "var(--color-ink)",
-          border: "2px solid var(--color-ink)",
-          borderRadius: "var(--radius)",
-          padding: "1.25rem 1rem 0.5rem",
-          boxShadow: "var(--shadow-md)",
-        }}
+        style={CHART_PANEL}
       >
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={chartData} margin={{ top: 4, right: 16, left: -16, bottom: 4 }}>
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 11, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
-              axisLine={{ stroke: "var(--color-apricot)", strokeOpacity: 0.2 }}
+              tick={AXIS_TICK}
+              axisLine={AXIS_LINE}
               tickLine={false}
               minTickGap={12}
             />
             <YAxis
               allowDecimals={false}
-              tick={{ fontSize: 11, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
+              tick={AXIS_TICK}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--color-ink)",
-                border: "2px solid var(--color-chartreuse)",
-                borderRadius: "var(--radius)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.75rem",
-                color: "var(--color-apricot)",
-              }}
+              contentStyle={TOOLTIP_STYLE}
               labelStyle={{ color: "var(--color-apricot)", fontWeight: 500 }}
               formatter={(val, name) => [val == null ? "no class" : `${val} ${current.unit}`, studioShort(String(name))]}
               labelFormatter={(_, payload) => {

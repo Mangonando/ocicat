@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { getPastClasses } from "@/lib/queries";
 import { berlinToday } from "@/lib/format";
 import LocationsDashboard from "@/components/LocationsDashboard";
+import { EmptyState, Page, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Locations & trends — riders analytics" };
 
@@ -15,29 +16,15 @@ export default async function LocationsPage() {
   const rows = getPastClasses(today);
 
   if (rows.length === 0) {
-    return (
-      <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)" }}>Locations & trends</h1>
-        <p style={{ marginTop: "1rem", opacity: 0.55 }}>No data yet. Run the scraper first.</p>
-      </div>
-    );
+    return <EmptyState title="Locations & trends" />;
   }
 
   const locations = [...new Set(rows.map((r) => r.location))].sort();
 
   return (
-    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
-      <h1
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "var(--text-xl)",
-          letterSpacing: "-0.01em",
-          marginBottom: "1rem",
-        }}
-      >
-        Locations & trends
-      </h1>
+    <Page>
+      <PageHeader title="Locations & trends" />
       <LocationsDashboard rows={rows} locations={locations} today={today} />
-    </div>
+    </Page>
   );
 }

@@ -1,8 +1,9 @@
 import { connection } from "next/server";
 import { getUpcomingBookings, type UpcomingBooking } from "@/lib/queries";
 import Link from "next/link";
-import { berlinToday } from "@/lib/format";
+import { berlinToday, shortDate, WEEKDAYS } from "@/lib/format";
 import { studioColor, studioShort } from "@/lib/studios";
+import { Page, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Upcoming classes — riders analytics" };
 
@@ -10,11 +11,8 @@ export const metadata = { title: "Upcoming classes — riders analytics" };
 export const instant = false;
 
 function formatDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
+  const weekday = WEEKDAYS[(new Date(iso + "T00:00:00Z").getUTCDay() + 6) % 7];
+  return `${weekday} ${shortDate(iso)}`;
 }
 
 interface ClassGroup {
@@ -60,21 +58,11 @@ export default async function UpcomingPage() {
   const totalClasses = classes.length;
 
   return (
-    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
-      <h1
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "var(--text-xl)",
-          letterSpacing: "-0.01em",
-          marginBottom: "0.25rem",
-        }}
-      >
-        Upcoming classes
-      </h1>
-      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
+    <Page>
+      <PageHeader title="Upcoming classes">
         Next 14 days · {totalClasses} class{totalClasses !== 1 ? "es" : ""} with bookings ·{" "}
         {rows.length} total bookings
-      </p>
+      </PageHeader>
 
       {rows.length === 0 && (
         <div
@@ -96,7 +84,7 @@ export default async function UpcomingPage() {
           <ClassCard key={cls.class_id} cls={cls} />
         ))}
       </div>
-    </div>
+    </Page>
   );
 }
 
@@ -169,7 +157,7 @@ function ClassCard({ cls }: { cls: ClassGroup }) {
             return (
               <tr
                 key={b.member_id}
-                className="table-row-alt"
+               
                 style={
                   isFirst
                     ? { backgroundColor: "color-mix(in srgb, var(--color-chartreuse) 18%, var(--color-apricot))" }

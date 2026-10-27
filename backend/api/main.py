@@ -1,6 +1,7 @@
 """ride analytics REST API — read-only, SQLite-backed, local use only."""
 
-from datetime import date, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -71,8 +72,9 @@ def get_customer(member_id: int):
 
 @app.get("/classes/upcoming", response_model=list[ClassBookings], summary="Upcoming classes with current bookings")
 def upcoming_classes(days: int = 14):
-    today = date.today().isoformat()
-    until = (date.today() + timedelta(days=days)).isoformat()
+    # Class dates are stored in Berlin local time, so "today" must be Berlin's too.
+    today = datetime.now(ZoneInfo("Europe/Berlin")).date()
+    until = today + timedelta(days=days)
     rows = (
         get_db()
         .execute(
@@ -88,7 +90,7 @@ def upcoming_classes(days: int = 14):
            WHERE c.local_date >= ? AND c.local_date <= ?
              AND c.is_mine = 1 AND c.is_cancelled = 0 AND s.status = 'booked'
            ORDER BY c.local_date, c.local_time, c.location, cu.name""",
-            (today, until),
+            (today.isoformat(), until.isoformat()),
         )
         .fetchall()
     )

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /** Small calendar glyph: the rider is booked for an upcoming class. */
-export function BookedMarker() {
+function BookedMarker() {
   return (
     <svg
       width="14"

@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import type { PastClass } from "./locations";
+import type { Counts } from "./outcomes";
 
 // Outcome counts used across queries. Early and late cancels are kept apart so
 // attended + no-shows + cancelled + late cancels = all resolved bookings.
@@ -8,13 +9,6 @@ const OUTCOME_SUMS = `
   SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)                       AS no_shows,
   SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 0 THEN 1 ELSE 0 END)  AS cancelled,
   SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 1 THEN 1 ELSE 0 END)  AS late_cancels`;
-
-export interface Counts {
-  checked_in: number;
-  no_shows: number;
-  cancelled: number;
-  late_cancels: number;
-}
 
 export interface CustomerStat {
   member_id: number;
@@ -229,17 +223,13 @@ export function getPastClasses(today: string): PastClass[] {
 }
 
 /* ── Per-class attendance (Overview table, tiles and donut) ──── */
-export interface ClassAttendance {
+export interface ClassAttendance extends Counts {
   id: number;
   name: string;
   local_date: string;
   local_time: string;
   location: string | null;
   total_bookings: number;
-  check_ins: number;
-  no_shows: number;
-  cancellations: number; // early cancels only
-  late_cancels: number;
   booked: number; // not resolved yet (upcoming classes)
   attendance_rate: number | null;
   cancel_rate: number | null; // all cancels ÷ bookings
@@ -257,10 +247,7 @@ export function getClassAttendance(): ClassAttendance[] {
           c.local_time,
           c.location,
           COUNT(s.booking_id)                                                       AS total_bookings,
-          SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)                 AS check_ins,
-          SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)                 AS no_shows,
-          SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 0 THEN 1 ELSE 0 END) AS cancellations,
-          SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 1 THEN 1 ELSE 0 END) AS late_cancels,
+          ${OUTCOME_SUMS},
           SUM(CASE WHEN s.status = 'booked'     THEN 1 ELSE 0 END)                 AS booked,
           ROUND(
             100.0 * SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END) /

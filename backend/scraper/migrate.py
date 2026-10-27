@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from config import TEACHER_ID
+
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 
@@ -22,7 +24,5 @@ def run(db):
 def _post_migrate(db, version):
     """Python-side steps that can't live in SQL alone."""
     if version == 1:
-        from config import TEACHER_ID
-
         with db:
             db.execute("UPDATE classes SET is_mine = (teacher_id = ?)", (TEACHER_ID,))

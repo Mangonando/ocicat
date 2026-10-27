@@ -3,6 +3,7 @@ import { getAllCustomerStats, getUpcomingMemberIds } from "@/lib/queries";
 import { getTier, TIERS } from "@/lib/tiers";
 import { berlinToday } from "@/lib/format";
 import RiderName, { BookedLegend } from "@/components/RiderName";
+import { EmptyState, Page, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Cadence — riders analytics" };
 
@@ -15,12 +16,7 @@ export default async function TiersPage() {
   const booked = getUpcomingMemberIds(berlinToday());
 
   if (stats.length === 0) {
-    return (
-      <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)" }}>Cadence</h1>
-        <p style={{ marginTop: "1rem", opacity: 0.55 }}>No data yet. Run the scraper first.</p>
-      </div>
-    );
+    return <EmptyState title="Cadence" />;
   }
 
   const buckets = TIERS.map((tier) => ({
@@ -30,20 +26,10 @@ export default async function TiersPage() {
   const total = stats.length;
 
   return (
-    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
-      <h1
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "var(--text-xl)",
-          letterSpacing: "-0.01em",
-          marginBottom: "0.25rem",
-        }}
-      >
-        Cadence
-      </h1>
-      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
+    <Page>
+      <PageHeader title="Cadence">
         {total} riders, grouped by how many classes they have attended.
-      </p>
+      </PageHeader>
 
       {/* Proportional tier bar */}
       <div style={{ marginBottom: "2.5rem" }}>
@@ -163,7 +149,7 @@ export default async function TiersPage() {
                 </thead>
                 <tbody>
                   {customers.map((c) => (
-                    <tr key={c.member_id} className="table-row-alt">
+                    <tr key={c.member_id}>
                       <td className="col-name">
                         <RiderName memberId={c.member_id} name={c.name} booked={booked.has(c.member_id)} />
                       </td>
@@ -178,6 +164,6 @@ export default async function TiersPage() {
           </section>
         ),
       )}
-    </div>
+    </Page>
   );
 }
