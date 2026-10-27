@@ -1,7 +1,7 @@
 import { getTopRegulars } from "@/lib/queries";
 import Link from "next/link";
 
-export const metadata = { title: "Top regulars — ride analytics" };
+export const metadata = { title: "Top regulars — ride.bln analytics" };
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -9,56 +9,64 @@ export default function RegularsPage() {
   const regulars = getTopRegulars(50);
 
   if (regulars.length === 0) {
-    return <p className="text-zinc-500">No data yet. Run the scraper first.</p>;
+    return (
+      <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)" }}>Top regulars</h1>
+        <p style={{ marginTop: "1rem", opacity: 0.55 }}>No data yet. Run the scraper first.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Top regulars</h1>
-      <p className="text-zinc-500 text-sm">
-        Top {regulars.length} by attended count.
+    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
+      <h1
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--text-xl)",
+          letterSpacing: "-0.01em",
+          marginBottom: "0.25rem",
+        }}
+      >
+        Top regulars
+      </h1>
+      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
+        Top {regulars.length} students by attended count.
       </p>
-
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="text-left text-zinc-500 border-b border-zinc-200">
-            <th className="pb-1 pr-2">#</th>
-            <th className="pb-1 pr-4">Name</th>
-            <th className="pb-1 pr-4">Attended</th>
-            <th className="pb-1 pr-4">First visit</th>
-            <th className="pb-1 pr-4">Last visit</th>
-            <th className="pb-1 pr-4">Fav location</th>
-            <th className="pb-1">Fav day</th>
-          </tr>
-        </thead>
-        <tbody>
-          {regulars.map((c, i) => (
-            <tr
-              key={c.member_id}
-              className="border-b border-zinc-100 hover:bg-zinc-100"
-            >
-              <td className="py-1 pr-2 text-zinc-400">{i + 1}</td>
-              <td className="py-1 pr-4">
-                <Link
-                  href={`/customers/${c.member_id}`}
-                  className="hover:underline text-blue-700"
-                >
-                  {c.name}
-                </Link>
-              </td>
-              <td className="py-1 pr-4 font-semibold">{c.attended}</td>
-              <td className="py-1 pr-4 text-zinc-500">{c.first_visit}</td>
-              <td className="py-1 pr-4 text-zinc-500">{c.last_visit}</td>
-              <td className="py-1 pr-4 text-zinc-600">
-                {c.fav_location ?? "—"}
-              </td>
-              <td className="py-1 text-zinc-600">
-                {c.fav_weekday != null ? DAYS[c.fav_weekday] : "—"}
-              </td>
+      <div style={{ overflowX: "auto" }}>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th style={{ width: "2.5rem" }}>#</th>
+              <th>Name</th>
+              <th>Attended</th>
+              <th>First visit</th>
+              <th>Last visit</th>
+              <th>Fav location</th>
+              <th>Fav day</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {regulars.map((c, i) => (
+              <tr key={c.member_id} className="table-row-alt">
+                <td className="col-muted col-number">{i + 1}</td>
+                <td className="col-name">
+                  <Link
+                    href={`/customers/${c.member_id}`}
+                    style={{ color: "var(--color-ink)", textDecorationColor: "var(--color-vista-blue)" }}
+                  >
+                    {c.name}
+                  </Link>
+                </td>
+                <td className="col-number" style={{ fontWeight: 500 }}>{c.attended}</td>
+                <td className="col-muted">{c.first_visit ?? "—"}</td>
+                <td className="col-muted">{c.last_visit ?? "—"}</td>
+                <td className="col-muted">{c.fav_location ?? "—"}</td>
+                <td className="col-muted">{c.fav_weekday != null ? DAYS[c.fav_weekday] : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -1,46 +1,46 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import NavLinks from "@/components/NavLinks";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ride analytics",
-  description: "Local dashboard for ride class attendance",
+  title: "ride.bln analytics",
+  description: "Local attendance dashboard for ride.bln indoor cycling",
 };
 
-const NAV = [
-  { href: "/upcoming", label: "Upcoming" },
-  { href: "/tiers", label: "Loyalty tiers" },
-  { href: "/regulars", label: "Top regulars" },
-  { href: "/lapsed", label: "One-and-done / lapsed" },
-  { href: "/reliability", label: "Reliability" },
-  { href: "/locations", label: "Locations & trends" },
-];
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900">
-        <header className="bg-zinc-900 text-zinc-100 px-6 py-3 flex items-center gap-8">
-          <Link href="/" className="font-semibold tracking-tight text-white">
-            ride analytics
+    <html lang="en">
+      <body>
+        <header
+          style={{
+            backgroundColor: "var(--color-ink)",
+            borderBottom: "3px solid var(--color-ink)",
+            padding: "0 2rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "2rem",
+            minHeight: "56px",
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.5rem",
+              letterSpacing: "-0.01em",
+              color: "var(--color-chartreuse)",
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
+          >
+            ride.bln
           </Link>
-          <nav className="flex gap-5 text-sm text-zinc-300">
-            {NAV.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="hover:text-white transition-colors"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <NavLinks />
         </header>
-        <main className="flex-1 p-8">{children}</main>
+        <main style={{ minHeight: "calc(100vh - 59px)", padding: "2rem" }}>
+          {children}
+        </main>
       </body>
     </html>
   );

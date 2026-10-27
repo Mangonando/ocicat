@@ -2,81 +2,175 @@ import { getAllCustomerStats } from "@/lib/queries";
 import { getTier, TIERS } from "@/lib/tiers";
 import Link from "next/link";
 
-export const metadata = { title: "Loyalty tiers — ride analytics" };
+export const metadata = { title: "Loyalty tiers — ride.bln analytics" };
 
 export default function TiersPage() {
   const stats = getAllCustomerStats();
 
   if (stats.length === 0) {
-    return <p className="text-zinc-500">No data yet. Run the scraper first.</p>;
+    return (
+      <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)" }}>Loyalty tiers</h1>
+        <p style={{ marginTop: "1rem", opacity: 0.55 }}>No data yet. Run the scraper first.</p>
+      </div>
+    );
   }
 
   const buckets = TIERS.map((tier) => ({
     ...tier,
     customers: stats.filter((s) => getTier(s.attended).label === tier.label),
   }));
+  const total = stats.length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <h1 className="text-2xl font-bold">Loyalty tiers</h1>
+    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
+      <h1
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--text-xl)",
+          letterSpacing: "-0.01em",
+          marginBottom: "0.25rem",
+        }}
+      >
+        Loyalty tiers
+      </h1>
+      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
+        {total} students, ranked by how many classes they have attended.
+      </p>
 
-      {/* Summary bar */}
-      <div className="grid grid-cols-6 gap-3">
-        {buckets.map(({ label, color, customers }) => (
-          <div
-            key={label}
-            className="rounded-lg p-4 text-white text-center"
-            style={{ backgroundColor: color }}
-          >
-            <div className="text-2xl font-bold">{customers.length}</div>
-            <div className="text-xs mt-1 opacity-90">{label}</div>
-          </div>
-        ))}
+      {/* Proportional tier bar */}
+      <div style={{ marginBottom: "2.5rem" }}>
+        <div
+          style={{
+            display: "flex",
+            height: "56px",
+            border: "2px solid var(--color-ink)",
+            borderRadius: "var(--radius)",
+            overflow: "hidden",
+            boxShadow: "var(--shadow-md)",
+          }}
+          role="img"
+          aria-label="Tier distribution bar chart"
+        >
+          {buckets.map(({ label, color, customers }) =>
+            customers.length === 0 ? null : (
+              <div
+                key={label}
+                style={{
+                  flex: customers.length,
+                  backgroundColor: color,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRight: "1px solid var(--color-ink)",
+                  transition: "flex 300ms ease",
+                }}
+                title={`${label}: ${customers.length} students (${Math.round((customers.length / total) * 100)}%)`}
+              >
+                {customers.length / total > 0.08 && (
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 500 }}>
+                    {label}
+                  </span>
+                )}
+              </div>
+            ),
+          )}
+        </div>
+        {/* Legend */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.5rem 1.5rem",
+            marginTop: "0.75rem",
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--text-xs)",
+          }}
+        >
+          {buckets.map(({ label, color, customers }) => (
+            <span key={label} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "10px",
+                  height: "10px",
+                  backgroundColor: color,
+                  border: "1.5px solid var(--color-ink)",
+                  borderRadius: "1px",
+                  flexShrink: 0,
+                }}
+              />
+              {label} — {customers.length}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Per-tier tables */}
       {buckets.map(({ label, color, customers }) =>
         customers.length === 0 ? null : (
-          <section key={label}>
-            <h2
-              className="text-lg font-semibold mb-2 flex items-center gap-2"
+          <section key={label} style={{ marginBottom: "2rem" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                marginBottom: "0.625rem",
+              }}
             >
               <span
-                className="inline-block w-3 h-3 rounded-full"
-                style={{ backgroundColor: color }}
+                style={{
+                  display: "inline-block",
+                  width: "12px",
+                  height: "12px",
+                  backgroundColor: color,
+                  border: "2px solid var(--color-ink)",
+                  borderRadius: "1px",
+                  flexShrink: 0,
+                }}
               />
-              {label} — {customers.length} people
-            </h2>
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="text-left text-zinc-500 border-b border-zinc-200">
-                  <th className="pb-1 pr-4">Name</th>
-                  <th className="pb-1 pr-4">Attended</th>
-                  <th className="pb-1 pr-4">First visit</th>
-                  <th className="pb-1">Last visit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => (
-                  <tr
-                    key={c.member_id}
-                    className="border-b border-zinc-100 hover:bg-zinc-100"
-                  >
-                    <td className="py-1 pr-4">
-                      <Link
-                        href={`/customers/${c.member_id}`}
-                        className="hover:underline text-blue-700"
-                      >
-                        {c.name}
-                      </Link>
-                    </td>
-                    <td className="py-1 pr-4">{c.attended}</td>
-                    <td className="py-1 pr-4 text-zinc-500">{c.first_visit}</td>
-                    <td className="py-1 text-zinc-500">{c.last_visit}</td>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-lg)", margin: 0 }}>
+                {label}
+              </h2>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--text-xs)",
+                  opacity: 0.55,
+                }}
+              >
+                {customers.length} student{customers.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Attended</th>
+                    <th>First visit</th>
+                    <th>Last visit</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {customers.map((c) => (
+                    <tr key={c.member_id} className="table-row-alt">
+                      <td className="col-name">
+                        <Link
+                          href={`/customers/${c.member_id}`}
+                          style={{ color: "var(--color-ink)", textDecorationColor: "var(--color-vista-blue)" }}
+                        >
+                          {c.name}
+                        </Link>
+                      </td>
+                      <td className="col-number" style={{ fontWeight: 500 }}>{c.attended}</td>
+                      <td className="col-muted">{c.first_visit ?? "—"}</td>
+                      <td className="col-muted">{c.last_visit ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         ),
       )}

@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { getUpcomingBookings, type UpcomingBooking } from "@/lib/queries";
 import Link from "next/link";
 
-export const metadata = { title: "Upcoming classes — ride analytics" };
+export const metadata = { title: "Upcoming classes — ride.bln analytics" };
 
 const LOCATIONS = ["Studio Charlottenburg", "Studio Prenzlauer Berg"];
 
@@ -49,7 +49,7 @@ export default async function UpcomingPage() {
   const today = new Date()
     .toLocaleDateString("sv", { timeZone: "Europe/Berlin" })
     .slice(0, 10);
-  const twoWeeks = new Date(Date.now() + 14 * 86_400_000)
+  const twoWeeks = new Date(new Date().getTime() + 14 * 86_400_000)
     .toLocaleDateString("sv", { timeZone: "Europe/Berlin" })
     .slice(0, 10);
 
@@ -57,34 +57,54 @@ export default async function UpcomingPage() {
   const totalClasses = new Set(rows.map((r) => r.class_id)).size;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold">Upcoming classes</h1>
-        <p className="text-zinc-500 text-sm mt-1">
-          Next 14 days · {totalClasses} class{totalClasses !== 1 ? "es" : ""}{" "}
-          with bookings · {rows.length} total bookings
-        </p>
-      </div>
+    <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
+      <h1
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--text-xl)",
+          letterSpacing: "-0.01em",
+          marginBottom: "0.25rem",
+        }}
+      >
+        Upcoming classes
+      </h1>
+      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
+        Next 14 days · {totalClasses} class{totalClasses !== 1 ? "es" : ""} with bookings ·{" "}
+        {rows.length} total bookings
+      </p>
 
       {rows.length === 0 && (
-        <p className="text-zinc-400">
-          No upcoming bookings found. Run{" "}
-          <code className="bg-zinc-800 px-1 rounded">
-            python scrape.py --force
-          </code>{" "}
-          to fetch them.
-        </p>
+        <div
+          className="card-apricot"
+          style={{ padding: "1.25rem", maxWidth: "28rem" }}
+        >
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)" }}>
+            No upcoming bookings found. Run{" "}
+            <code style={{ fontFamily: "var(--font-mono)", fontWeight: 500 }}>
+              python scrape.py --force
+            </code>{" "}
+            to fetch them.
+          </p>
+        </div>
       )}
 
       {LOCATIONS.map((loc) => {
         const classes = groupByClass(rows.filter((r) => r.location === loc));
         if (classes.length === 0) return null;
         return (
-          <section key={loc}>
-            <h2 className="text-xl font-semibold border-b border-zinc-200 pb-2 mb-4">
+          <section key={loc} style={{ marginBottom: "2.5rem" }}>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--text-lg)",
+                borderBottom: "2px solid var(--color-ink)",
+                paddingBottom: "0.5rem",
+                marginBottom: "1.25rem",
+              }}
+            >
               {loc}
             </h2>
-            <div className="space-y-6">
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               {classes.map((cls) => (
                 <ClassCard key={cls.class_id} cls={cls} />
               ))}
@@ -100,32 +120,62 @@ function ClassCard({ cls }: { cls: ClassGroup }) {
   const firstTimers = cls.bookings.filter((b) => b.attended === 0).length;
 
   return (
-    <div className="border border-zinc-200 rounded-lg overflow-hidden">
-      <div className="bg-zinc-900 text-white px-4 py-3 flex items-center justify-between">
-        <div>
-          <span className="font-semibold">{cls.class_name}</span>
-          <span className="ml-3 text-zinc-400 text-sm">
+    <div
+      style={{
+        border: "2px solid var(--color-ink)",
+        borderRadius: "var(--radius)",
+        overflow: "hidden",
+        boxShadow: "var(--shadow-sm)",
+      }}
+    >
+      {/* Card header */}
+      <div
+        style={{
+          backgroundColor: "var(--color-ink)",
+          color: "var(--color-apricot)",
+          padding: "0.75rem 1rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "1rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-base)" }}>
+            {cls.class_name}
+          </span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.6 }}>
             {formatDate(cls.local_date)} · {cls.local_time}
           </span>
         </div>
-        <div className="text-sm text-zinc-300">
-          {cls.bookings.length} booked
-          {cls.capacity ? ` / ${cls.capacity}` : ""}
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
+          <span>
+            {cls.bookings.length} booked{cls.capacity ? ` / ${cls.capacity}` : ""}
+          </span>
           {firstTimers > 0 && (
-            <span className="ml-2 text-amber-400">
-              · {firstTimers} first-timer{firstTimers > 1 ? "s" : ""}
+            <span
+              style={{
+                backgroundColor: "var(--color-chartreuse)",
+                color: "var(--color-ink)",
+                padding: "1px 6px",
+                borderRadius: "var(--radius)",
+                fontWeight: 500,
+              }}
+            >
+              {firstTimers} first
             </span>
           )}
         </div>
       </div>
 
-      <table className="w-full text-sm">
+      {/* Bookings table */}
+      <table className="data-table">
         <thead>
-          <tr className="text-left text-zinc-500 bg-zinc-50 border-b border-zinc-200">
-            <th className="px-4 py-2">Name</th>
-            <th className="px-4 py-2">Attended</th>
-            <th className="px-4 py-2">Last class</th>
-            <th className="px-4 py-2"></th>
+          <tr>
+            <th>Name</th>
+            <th>Attended</th>
+            <th>Last class</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -134,23 +184,38 @@ function ClassCard({ cls }: { cls: ClassGroup }) {
             return (
               <tr
                 key={b.member_id}
-                className={`border-b border-zinc-100 hover:bg-zinc-50 ${isFirst ? "bg-amber-50" : ""}`}
+                className="table-row-alt"
+                style={
+                  isFirst
+                    ? { backgroundColor: "color-mix(in srgb, var(--color-chartreuse) 18%, var(--color-apricot))" }
+                    : undefined
+                }
               >
-                <td className="px-4 py-2">
+                <td className="col-name">
                   <Link
                     href={`/customers/${b.member_id}`}
-                    className="hover:underline text-blue-700"
+                    style={{ color: "var(--color-ink)", textDecorationColor: "var(--color-vista-blue)" }}
                   >
                     {b.customer_name}
                   </Link>
                 </td>
-                <td className="px-4 py-2 font-semibold">{b.attended}</td>
-                <td className="px-4 py-2 text-zinc-500">
-                  {b.last_visit ?? "—"}
-                </td>
-                <td className="px-4 py-2">
+                <td className="col-number" style={{ fontWeight: 500 }}>{b.attended}</td>
+                <td className="col-muted">{b.last_visit ?? "—"}</td>
+                <td>
                   {isFirst && (
-                    <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.6875rem",
+                        backgroundColor: "var(--color-chartreuse)",
+                        color: "var(--color-ink)",
+                        padding: "1px 6px",
+                        borderRadius: "var(--radius)",
+                        border: "1px solid var(--color-ink)",
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       first class
                     </span>
                   )}

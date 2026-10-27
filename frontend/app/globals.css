@@ -1,26 +1,249 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap');
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   DESIGN TOKENS
+   Four brand colours + ink. No other hex value appears in
+   any component file — only here and in :root below.
+   ───────────────────────────────────────────────────────────── */
+@theme {
+  /* Palette */
+  --color-apricot:    #FCD9BE;
+  --color-chartreuse: #D6F74C;
+  --color-vista-blue: #8C9EFF;
+  --color-tomato:     #F06038;
+  --color-ink:        #13172E;
+
+  /* Type — Anton for display, JetBrains Mono for everything else */
+  --font-display: 'Anton', Impact, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+
+  /* Type scale — deliberately oversized at the top */
+  --text-xs:   0.6875rem;  /* 11px  — axis labels, metadata */
+  --text-sm:   0.8125rem;  /* 13px  — table body */
+  --text-base: 0.9375rem;  /* 15px  — base */
+  --text-lg:   1.25rem;    /* 20px  — subheadings */
+  --text-xl:   2rem;       /* 32px  — section titles */
+  --text-2xl:  3.25rem;    /* 52px  — stat numbers */
+  --text-3xl:  5.5rem;     /* 88px  — brand/hero */
+
+  /* Radius — sharp, editorial */
+  --radius:    2px;
+  --radius-sm: 1px;
+  --radius-lg: 4px;
+}
+
+/* ── Derived tokens (not Tailwind utilities; used via var()) ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Tier colours — derived from the four base colours */
+  --color-tier-5: var(--color-chartreuse);
+  --color-tier-4: color-mix(in srgb, var(--color-chartreuse) 45%, var(--color-vista-blue) 55%);
+  --color-tier-3: var(--color-vista-blue);
+  --color-tier-2: color-mix(in srgb, var(--color-vista-blue) 50%, var(--color-apricot) 50%);
+  --color-tier-1: color-mix(in srgb, var(--color-apricot) 75%, var(--color-tomato) 25%);
+  --color-tier-0: color-mix(in srgb, var(--color-apricot) 65%, var(--color-ink) 35%);
+
+  /* Table row alternation — apricot base + faint vistaBlue tint */
+  --color-row-alt: color-mix(in srgb, var(--color-apricot) 88%, var(--color-vista-blue) 12%);
+
+  /* Surface overlays */
+  --color-surface-ink: color-mix(in srgb, var(--color-ink) 92%, var(--color-apricot) 8%);
+
+  /* Hard-offset shadows — ink-coloured, no blur */
+  --shadow-sm: 3px 3px 0 var(--color-ink);
+  --shadow-md: 5px 5px 0 var(--color-ink);
+  --shadow-lg: 8px 8px 0 var(--color-ink);
+
+  /* Chart series */
+  --chart-1: var(--color-chartreuse);
+  --chart-2: var(--color-vista-blue);
+  --chart-3: var(--color-tomato);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─────────────────────────────────────────────────────────────
+   BASE STYLES
+   ───────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--color-apricot);
+  background-image: radial-gradient(
+    circle,
+    rgba(19, 23, 46, 0.06) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─────────────────────────────────────────────────────────────
+   UTILITY CLASSES
+   (shadow, button, card, table) — defined here once, used as
+   className strings in components without raw values.
+   ───────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Hard-offset shadows */
+  .shadow-hard-sm { box-shadow: var(--shadow-sm); }
+  .shadow-hard-md { box-shadow: var(--shadow-md); }
+  .shadow-hard-lg { box-shadow: var(--shadow-lg); }
+
+  /* Card surface: Vista Blue bg + ink border + hard shadow */
+  .card {
+    background-color: var(--color-vista-blue);
+    border: 2px solid var(--color-ink);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-apricot {
+    background-color: var(--color-apricot);
+    border: 2px solid var(--color-ink);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Table row alternation */
+  .table-row-alt:nth-child(even) td {
+    background-color: var(--color-row-alt);
+  }
+
+  /* No-show alert cell */
+  .cell-alert {
+    color: var(--color-tomato);
+    font-weight: 500;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─────────────────────────────────────────────────────────────
+   BUTTON SYSTEM
+   ───────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: var(--color-chartreuse);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: none;
+}
+.btn-primary:focus-visible {
+  outline: 3px solid var(--color-vista-blue);
+  outline-offset: 2px;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-ink);
+  box-shadow: var(--shadow-sm);
+}
+.btn-secondary:hover {
+  background-color: var(--color-vista-blue);
+  transform: translate(-2px, -2px);
+  box-shadow: none;
+}
+.btn-secondary:focus-visible {
+  outline: 3px solid var(--color-chartreuse);
+  outline-offset: 2px;
+}
+
+.btn-destructive {
+  background-color: var(--color-tomato);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-sm);
+}
+.btn-destructive:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   DATA TABLE BASE STYLES
+   ───────────────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--color-ink);
+  color: var(--color-apricot);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.data-table thead th:first-child { border-radius: var(--radius) 0 0 0; }
+.data-table thead th:last-child  { border-radius: 0 var(--radius) 0 0; }
+
+.data-table tbody tr {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 12%, var(--color-apricot));
+  transition: background-color 100ms ease;
+}
+
+.data-table tbody tr:nth-child(even) td {
+  background-color: var(--color-row-alt);
+}
+
+.data-table tbody tr:hover td {
+  background-color: color-mix(in srgb, var(--color-vista-blue) 20%, var(--color-apricot));
+}
+
+.data-table tbody td {
+  padding: 0.5rem 0.75rem;
+  color: var(--color-ink);
+}
+
+.data-table tbody td.col-name {
+  font-weight: 500;
+}
+
+.data-table tbody td.col-number {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.data-table tbody td.col-muted {
+  color: color-mix(in srgb, var(--color-ink) 55%, var(--color-apricot));
+}
+
+.data-table tbody td.col-alert {
+  color: var(--color-tomato);
+  font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   REDUCED MOTION
+   ───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

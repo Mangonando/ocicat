@@ -18,78 +18,129 @@ export default async function CustomerPage({
 
   const visits = getCustomerVisits(memberId);
 
-  return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <div>
-        <Link href="/regulars" className="text-sm text-zinc-500 hover:underline">
-          ← Back
-        </Link>
-        <h1 className="text-2xl font-bold mt-2">{stat.name}</h1>
-      </div>
+  const statCards = [
+    { label: "Attended",     value: stat.attended,     accent: "var(--color-chartreuse)" },
+    { label: "No-shows",     value: stat.no_shows,     accent: stat.no_shows > 2 ? "var(--color-tomato)" : "var(--color-apricot)" },
+    { label: "Cancelled",    value: stat.cancelled,    accent: "var(--color-vista-blue)" },
+    { label: "Late cancels", value: stat.late_cancels, accent: "var(--color-apricot)" },
+  ];
 
-      {/* Stats summary */}
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: "Attended", value: stat.attended },
-          { label: "No-shows", value: stat.no_shows },
-          { label: "Cancelled", value: stat.cancelled },
-          { label: "Late cancels", value: stat.late_cancels },
-        ].map(({ label, value }) => (
+  return (
+    <div style={{ maxWidth: "52rem", margin: "0 auto" }}>
+      <Link
+        href="/regulars"
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--text-xs)",
+          color: "var(--color-ink)",
+          opacity: 0.55,
+          textDecoration: "none",
+          display: "inline-block",
+          marginBottom: "1rem",
+        }}
+      >
+        ← Back to regulars
+      </Link>
+
+      <h1
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--text-xl)",
+          letterSpacing: "-0.01em",
+          marginBottom: "0.375rem",
+        }}
+      >
+        {stat.name}
+      </h1>
+      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
+        First visit: {stat.first_visit ?? "—"} · Last visit: {stat.last_visit ?? "—"}
+      </p>
+
+      {/* Stat cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "0.75rem",
+          marginBottom: "2.5rem",
+        }}
+      >
+        {statCards.map(({ label, value, accent }) => (
           <div
             key={label}
-            className="bg-white border border-zinc-200 rounded-lg p-4 text-center"
+            style={{
+              backgroundColor: accent,
+              border: "2px solid var(--color-ink)",
+              borderRadius: "var(--radius)",
+              boxShadow: "var(--shadow-sm)",
+              padding: "1rem",
+              textAlign: "center",
+            }}
           >
-            <div className="text-2xl font-bold">{value}</div>
-            <div className="text-xs text-zinc-500 mt-1">{label}</div>
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--text-2xl)",
+                lineHeight: 1,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {value}
+            </div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", marginTop: "0.25rem", opacity: 0.65 }}>
+              {label}
+            </div>
           </div>
         ))}
       </div>
 
-      <p className="text-sm text-zinc-500">
-        First visit: <strong>{stat.first_visit ?? "—"}</strong> · Last visit:{" "}
-        <strong>{stat.last_visit ?? "—"}</strong>
-      </p>
-
       {/* Visit history */}
-      <div>
-        <h2 className="text-lg font-semibold mb-2">
-          Visit history ({visits.length})
-        </h2>
-        {visits.length === 0 ? (
-          <p className="text-zinc-400 text-sm">No visits yet.</p>
-        ) : (
-          <table className="w-full text-sm border-collapse">
+      <h2
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--text-lg)",
+          marginBottom: "0.75rem",
+        }}
+      >
+        Visit history{" "}
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-base)", opacity: 0.5, fontWeight: 400 }}>
+          ({visits.length})
+        </span>
+      </h2>
+
+      {visits.length === 0 ? (
+        <p style={{ opacity: 0.45, fontFamily: "var(--font-mono)" }}>No visits on record.</p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table className="data-table">
             <thead>
-              <tr className="text-left text-zinc-500 border-b border-zinc-200">
-                <th className="pb-1 pr-4">Date</th>
-                <th className="pb-1 pr-4">Day</th>
-                <th className="pb-1 pr-4">Class</th>
-                <th className="pb-1">Location</th>
+              <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Class</th>
+                <th>Location</th>
               </tr>
             </thead>
             <tbody>
               {visits.map((v) => (
-                <tr
-                  key={v.booking_id}
-                  className="border-b border-zinc-100 hover:bg-zinc-100"
-                >
-                  <td className="py-1 pr-4">{v.local_date}</td>
-                  <td className="py-1 pr-4 text-zinc-500">
-                    {DAYS[v.weekday]}
-                  </td>
-                  <td className="py-1 pr-4">
+                <tr key={v.booking_id} className="table-row-alt">
+                  <td className="col-muted">{v.local_date}</td>
+                  <td className="col-muted">{DAYS[v.weekday]}</td>
+                  <td className="col-name">
                     {v.class_name}
                     {!v.is_mine && (
-                      <span className="ml-1 text-xs text-zinc-400">(sub)</span>
+                      <span style={{ marginLeft: "0.375rem", fontSize: "0.6875rem", opacity: 0.45 }}>
+                        (sub)
+                      </span>
                     )}
                   </td>
-                  <td className="py-1 text-zinc-500">{v.location ?? "—"}</td>
+                  <td className="col-muted">{v.location ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

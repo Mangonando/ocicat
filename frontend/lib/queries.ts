@@ -186,6 +186,145 @@ export function getUpcomingBookings(from: string, to: string): UpcomingBooking[]
   }
 }
 
+/* ── Summary stats for the dashboard home ────────────────────── */
+export interface SummaryStats {
+  total_classes: number;
+  total_bookings: number;
+  total_attended: number;
+  total_no_shows: number;
+  total_cancelled: number;
+  unique_students: number;
+}
+
+export function getSummaryStats(): SummaryStats | null {
+  try {
+    return (
+      getDb()
+        .prepare(
+          `SELECT
+            COUNT(DISTINCT c.id)                                                AS total_classes,
+            COUNT(s.id)                                                         AS total_bookings,
+            SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)           AS total_attended,
+            SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)           AS total_no_shows,
+            SUM(CASE WHEN s.status = 'cancelled'  THEN 1 ELSE 0 END)           AS total_cancelled,
+            COUNT(DISTINCT s.member_id)                                         AS unique_students
+           FROM signups s
+           JOIN classes c ON c.id = s.class_id
+           WHERE c.is_mine = 1 AND c.is_cancelled = 0`,
+        )
+        .get() as SummaryStats | undefined
+    ) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/* ── Weekly attendance (line chart) ──────────────────────────── */
+export interface WeeklyPoint {
+  week: string;
+  week_start: string;
+  attended: number;
+}
+
+export function getWeeklyAttendance(): WeeklyPoint[] {
+  try {
+    return getDb()
+      .prepare(
+        `SELECT
+          strftime('%Y-W%W', c.local_date)                                    AS week,
+          MIN(c.local_date)                                                   AS week_start,
+          SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)           AS attended
+         FROM signups s
+         JOIN classes c ON c.id = s.class_id
+         WHERE c.is_mine = 1 AND c.is_cancelled = 0
+         GROUP BY week
+         ORDER BY week
+         LIMIT 52`,
+      )
+      .all() as WeeklyPoint[];
+  } catch {
+    return [];
+  }
+}
+
+/* ── Attendance per slot (bar chart by weekday × time) ───────── */
+export interface SlotPoint {
+  weekday: number;
+  local_time: string;
+  classes: number;
+  total_attended: number;
+  avg_per_class: number;
+}
+
+export function getSlotAttendance(): SlotPoint[] {
+  try {
+    return getDb()
+      .prepare(
+        `SELECT
+          c.weekday,
+          c.local_time,
+          COUNT(DISTINCT c.id)                                                AS classes,
+          SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)           AS total_attended,
+          ROUND(
+            1.0 * SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)
+            / NULLIF(COUNT(DISTINCT c.id), 0), 1)                            AS avg_per_class
+         FROM signups s
+         JOIN classes c ON c.id = s.class_id
+         WHERE c.is_mine = 1 AND c.is_cancelled = 0
+         GROUP BY c.weekday, c.local_time
+         ORDER BY avg_per_class DESC`,
+      )
+      .all() as SlotPoint[];
+  } catch {
+    return [];
+  }
+}
+
+/* ── Per-class attendance table ──────────────────────────────── */
+export interface ClassAttendance {
+  id: number;
+  name: string;
+  local_date: string;
+  local_time: string;
+  location: string | null;
+  total_bookings: number;
+  check_ins: number;
+  no_shows: number;
+  cancellations: number;
+  attendance_rate: number | null;
+}
+
+export function getClassAttendance(limit = 200): ClassAttendance[] {
+  try {
+    return getDb()
+      .prepare(
+        `SELECT
+          c.id,
+          c.name,
+          c.local_date,
+          c.local_time,
+          c.location,
+          COUNT(s.id)                                                               AS total_bookings,
+          SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)                 AS check_ins,
+          SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)                 AS no_shows,
+          SUM(CASE WHEN s.status = 'cancelled'  THEN 1 ELSE 0 END)                 AS cancellations,
+          ROUND(
+            100.0 * SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END) /
+            NULLIF(SUM(CASE WHEN s.status IN ('checked_in','no_show') THEN 1 ELSE 0 END), 0),
+            1)                                                                      AS attendance_rate
+         FROM classes c
+         LEFT JOIN signups s ON s.class_id = c.id
+         WHERE c.is_mine = 1 AND c.is_cancelled = 0
+         GROUP BY c.id
+         ORDER BY c.local_date DESC, c.local_time DESC
+         LIMIT ?`,
+      )
+      .all(limit) as ClassAttendance[];
+  } catch {
+    return [];
+  }
+}
+
 export function getCustomerStat(memberId: number): CustomerStat | null {
   try {
     return (
