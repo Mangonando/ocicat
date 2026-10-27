@@ -10,6 +10,12 @@ const OUTCOME_SUMS = `
   SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 0 THEN 1 ELSE 0 END)  AS cancelled,
   SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 1 THEN 1 ELSE 0 END)  AS late_cancels`;
 
+// A rider's most-visited studio over all their attended classes (ignores any location filter).
+const FAV_LOCATION = (memberCol: string) => `
+  (SELECT fv.location FROM v_visits fv
+   WHERE fv.member_id = ${memberCol} AND fv.location IS NOT NULL
+   GROUP BY fv.location ORDER BY COUNT(*) DESC LIMIT 1)`;
+
 export interface CustomerStat {
   member_id: number;
   name: string;
@@ -32,16 +38,32 @@ export interface TopRegular {
   fav_weekday: number | null;
 }
 
-export function getAllCustomerStats(): CustomerStat[] {
+export interface RiderStat {
+  member_id: number;
+  name: string;
+  attended: number;
+  first_visit: string | null;
+  last_visit: string | null;
+  fav_location: string | null;
+}
+
+/** Riders with at least one attended class. With a location, only visits at that studio count. */
+export function getRiderStats(location: string | null = null): RiderStat[] {
   try {
-    return getDb().prepare(
-        `SELECT member_id, name, attended, no_shows, cancelled, late_cancels,
-          signups, first_visit, last_visit
-         FROM v_customer_stats
-         WHERE attended > 0
+    return getDb()
+      .prepare(
+        `SELECT v.member_id, cu.name,
+          COUNT(*)          AS attended,
+          MIN(v.local_date) AS first_visit,
+          MAX(v.local_date) AS last_visit,
+          ${FAV_LOCATION("v.member_id")} AS fav_location
+         FROM v_visits v
+         JOIN customers cu ON cu.member_id = v.member_id
+         WHERE :location IS NULL OR v.location = :location
+         GROUP BY v.member_id
          ORDER BY attended DESC`,
       )
-      .all() as CustomerStat[];
+      .all({ location }) as RiderStat[];
   } catch {
     return [];
   }
@@ -72,9 +94,7 @@ export function getTopRegulars(limit = 50, location: string | null = null): TopR
           COUNT(*)          AS attended,
           MIN(v.local_date) AS first_visit,
           MAX(v.local_date) AS last_visit,
-          (SELECT v2.location FROM v_visits v2
-           WHERE v2.member_id = v.member_id AND v2.location IS NOT NULL
-           GROUP BY v2.location ORDER BY COUNT(*) DESC LIMIT 1) AS fav_location,
+          ${FAV_LOCATION("v.member_id")} AS fav_location,
           (SELECT v3.weekday FROM v_visits v3
            WHERE v3.member_id = v.member_id AND (:location IS NULL OR v3.location = :location)
            GROUP BY v3.weekday ORDER BY COUNT(*) DESC LIMIT 1) AS fav_weekday
@@ -94,21 +114,25 @@ export function getTopRegulars(limit = 50, location: string | null = null): TopR
 export interface ReliabilityRow extends Counts {
   member_id: number;
   name: string;
+  fav_location: string | null;
 }
 
-/** Riders with at least `minResolved` bookings that have an outcome (not still booked). */
-export function getReliabilityStats(minResolved = 3): ReliabilityRow[] {
+/** Riders with at least `minResolved` bookings that have an outcome (not still booked).
+ * With a location, only bookings for that studio's classes count. */
+export function getReliabilityStats(minResolved = 3, location: string | null = null): ReliabilityRow[] {
   try {
     return getDb()
       .prepare(
-        `SELECT cu.member_id, cu.name, ${OUTCOME_SUMS}
+        `SELECT cu.member_id, cu.name, ${OUTCOME_SUMS},
+          ${FAV_LOCATION("cu.member_id")} AS fav_location
          FROM signups s
          JOIN customers cu ON cu.member_id = s.member_id
-         WHERE s.status != 'booked'
+         JOIN classes c ON c.id = s.class_id
+         WHERE s.status != 'booked' AND (:location IS NULL OR c.location = :location)
          GROUP BY cu.member_id
-         HAVING COUNT(*) >= ?`,
+         HAVING COUNT(*) >= :minResolved`,
       )
-      .all(minResolved) as ReliabilityRow[];
+      .all({ location, minResolved }) as ReliabilityRow[];
   } catch {
     return [];
   }

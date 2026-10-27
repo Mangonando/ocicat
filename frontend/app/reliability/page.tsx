@@ -1,8 +1,10 @@
 import { connection } from "next/server";
-import { getReliabilityStats, getUpcomingMemberIds } from "@/lib/queries";
+import { getLocations, getReliabilityStats, getUpcomingMemberIds } from "@/lib/queries";
+import { locationParam } from "@/lib/filters";
 import { berlinToday } from "@/lib/format";
 import { OUTCOMES, totalOf } from "@/lib/outcomes";
 import { BookedLegend } from "@/components/RiderName";
+import LocationSelect from "@/components/LocationSelect";
 import ReliabilityTable, { type ReliabilityEntry } from "@/components/ReliabilityTable";
 import { EmptyState, Legend, Page, PageHeader, Swatch } from "@/components/ui";
 
@@ -11,12 +13,18 @@ export const metadata = { title: "Reliability — riders analytics" };
 // Reads the database and "today" on every request, so navigation may wait for the server.
 export const instant = false;
 
-export default async function ReliabilityPage() {
+export default async function ReliabilityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await connection();
-  const stats = getReliabilityStats(3);
+  const locations = getLocations();
+  const location = locationParam((await searchParams).location, locations);
+  const stats = getReliabilityStats(3, location);
   const booked = getUpcomingMemberIds(berlinToday());
 
-  if (stats.length === 0) {
+  if (stats.length === 0 && !location) {
     return <EmptyState title="Reliability" />;
   }
 
@@ -33,7 +41,11 @@ export default async function ReliabilityPage() {
         outcome (upcoming bookings are left out). Attended + no-show + cancelled + late cancel =
         100%. Missed = no-show + cancelled + late cancel. Riders with 3+ such bookings shown. Click
         a column to sort.
+        {location && ` Only bookings for ${location} classes count.`}
       </PageHeader>
+      <div style={{ marginBottom: "1rem" }}>
+        <LocationSelect locations={locations} value={location ?? ""} />
+      </div>
       <Legend style={{ marginBottom: "0.5rem" }}>
         {OUTCOMES.map((o) => (
           <Swatch key={o.key} color={o.color}>

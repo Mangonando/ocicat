@@ -22,3 +22,9 @@ export function applyClassFilters<T extends Filterable>(rows: T[], f: ClassFilte
       inRange(r.local_date, f.range),
   );
 }
+
+/** The ?location= search param, accepted only when it names a known studio,
+ * so the query never sees arbitrary input. */
+export function locationParam(raw: string | string[] | undefined, known: string[]): string | null {
+  return typeof raw === "string" && known.includes(raw) ? raw : null;
+}

@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { getLocations, getTopRegulars, getUpcomingMemberIds } from "@/lib/queries";
 import { berlinToday, WEEKDAYS } from "@/lib/format";
+import { locationParam } from "@/lib/filters";
 import RiderName, { BookedLegend } from "@/components/RiderName";
 import LocationSelect from "@/components/LocationSelect";
 import { Page, PageHeader } from "@/components/ui";
@@ -16,11 +17,8 @@ export default async function RegularsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   await connection();
-  const { location: rawLocation } = await searchParams;
   const locations = getLocations();
-  // Only accept a studio we know, so the query never sees arbitrary input.
-  const location =
-    typeof rawLocation === "string" && locations.includes(rawLocation) ? rawLocation : null;
+  const location = locationParam((await searchParams).location, locations);
 
   const regulars = getTopRegulars(50, location);
   const booked = getUpcomingMemberIds(berlinToday());

@@ -3,16 +3,18 @@
 import { useMemo } from "react";
 import { OUTCOMES, outcomeShares, type Counts, type OutcomeShares } from "@/lib/outcomes";
 import RiderName from "@/components/RiderName";
+import { NOTE } from "@/components/ui";
 import { compareValues, useSort } from "@/components/useSort";
 
 export interface ReliabilityEntry extends Counts {
   member_id: number;
   name: string;
+  fav_location: string | null;
   booked: boolean; // has an upcoming booking
   resolved: number; // bookings with an outcome
 }
 
-type SortKey = "name" | "resolved" | keyof OutcomeShares;
+type SortKey = "name" | "fav_location" | "resolved" | keyof OutcomeShares;
 
 const PCT_COLUMNS: [keyof OutcomeShares, string][] = [
   ["checked_in", "Attended %"],
@@ -27,7 +29,7 @@ function fmtShare(v: number | null): string {
 }
 
 export default function ReliabilityTable({ rows }: { rows: ReliabilityEntry[] }) {
-  const sort = useSort<SortKey>("missed", ["name"]);
+  const sort = useSort<SortKey>("missed", ["name", "fav_location"]);
 
   const withShares = useMemo(
     () => rows.map((r) => ({ ...r, shares: outcomeShares(r) })),
@@ -36,7 +38,9 @@ export default function ReliabilityTable({ rows }: { rows: ReliabilityEntry[] })
 
   const sorted = useMemo(() => {
     const value = (r: (typeof withShares)[number]) =>
-      sort.key === "name" ? r.name : sort.key === "resolved" ? r.resolved : r.shares[sort.key];
+      sort.key === "name" || sort.key === "fav_location" || sort.key === "resolved"
+        ? r[sort.key]
+        : r.shares[sort.key];
     const sign = sort.dir === "asc" ? 1 : -1;
     // Ties: riders with more bookings first, whatever the direction.
     return [...withShares].sort(
@@ -44,12 +48,17 @@ export default function ReliabilityTable({ rows }: { rows: ReliabilityEntry[] })
     );
   }, [withShares, sort.key, sort.dir]);
 
+  if (rows.length === 0) {
+    return <p style={NOTE}>No riders with 3+ bookings match this filter.</p>;
+  }
+
   return (
     <div style={{ overflowX: "auto" }}>
       <table className="data-table">
         <thead>
           <tr>
             {sort.th("name", "Name")}
+            {sort.th("fav_location", "Fav location")}
             {sort.th("resolved", "Bookings")}
             <th>Split</th>
             {PCT_COLUMNS.map(([key, label]) => sort.th(key, label))}
@@ -63,6 +72,7 @@ export default function ReliabilityTable({ rows }: { rows: ReliabilityEntry[] })
                 <td className="col-name">
                   <RiderName memberId={r.member_id} name={r.name} booked={r.booked} />
                 </td>
+                <td className="col-muted">{r.fav_location ?? "—"}</td>
                 <td className="col-number col-muted">{r.resolved}</td>
                 <td>
                   <SplitBar row={r} />

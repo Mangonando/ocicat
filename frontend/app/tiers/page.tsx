@@ -1,8 +1,10 @@
 import { connection } from "next/server";
-import { getAllCustomerStats, getUpcomingMemberIds } from "@/lib/queries";
+import { getLocations, getRiderStats, getUpcomingMemberIds } from "@/lib/queries";
+import { locationParam } from "@/lib/filters";
 import { getTier, TIERS } from "@/lib/tiers";
 import { berlinToday } from "@/lib/format";
 import RiderName, { BookedLegend } from "@/components/RiderName";
+import LocationSelect from "@/components/LocationSelect";
 import { EmptyState, Page, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Cadence — riders analytics" };
@@ -10,12 +12,18 @@ export const metadata = { title: "Cadence — riders analytics" };
 // Reads the database and "today" on every request, so navigation may wait for the server.
 export const instant = false;
 
-export default async function TiersPage() {
+export default async function TiersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await connection();
-  const stats = getAllCustomerStats();
+  const locations = getLocations();
+  const location = locationParam((await searchParams).location, locations);
+  const stats = getRiderStats(location);
   const booked = getUpcomingMemberIds(berlinToday());
 
-  if (stats.length === 0) {
+  if (stats.length === 0 && !location) {
     return <EmptyState title="Cadence" />;
   }
 
@@ -28,8 +36,13 @@ export default async function TiersPage() {
   return (
     <Page>
       <PageHeader title="Cadence">
-        {total} riders, grouped by how many classes they have attended.
+        {location
+          ? `${total} riders, grouped by how many classes they have attended at ${location}. Counts and dates only include that studio.`
+          : `${total} riders, grouped by how many classes they have attended.`}
       </PageHeader>
+      <div style={{ marginBottom: "1.5rem" }}>
+        <LocationSelect locations={locations} value={location ?? ""} />
+      </div>
 
       {/* Proportional tier bar */}
       <div style={{ marginBottom: "2.5rem" }}>
@@ -145,6 +158,7 @@ export default async function TiersPage() {
                     <th>Attended</th>
                     <th>First visit</th>
                     <th>Last visit</th>
+                    <th>Fav location</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -156,6 +170,7 @@ export default async function TiersPage() {
                       <td className="col-number" style={{ fontWeight: 500 }}>{c.attended}</td>
                       <td className="col-muted">{c.first_visit ?? "—"}</td>
                       <td className="col-muted">{c.last_visit ?? "—"}</td>
+                      <td className="col-muted">{c.fav_location ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

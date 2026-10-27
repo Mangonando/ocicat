@@ -4,7 +4,7 @@ import {
 } from "../format";
 import { outcomeOf, outcomeShares } from "../outcomes";
 import { summarize } from "../overview";
-import { applyClassFilters, type ClassFilterState } from "../filters";
+import { applyClassFilters, locationParam, type ClassFilterState } from "../filters";
 import type { ClassAttendance } from "../queries";
 import {
   monthlyByLocation, recurringSlots, slotAttendance, summarizeByLocation, type PastClass,
@@ -166,5 +166,15 @@ describe("locations", () => {
     const slots = slotAttendance(septOnly, recurring);
     expect(slots).toHaveLength(1);
     expect(slots[0]).toMatchObject({ weekday: 0, classes: 2, avg_per_class: 32 });
+  });
+});
+
+describe("location search param", () => {
+  const known = ["Studio A", "Studio B"];
+  it("accepts only known studios", () => {
+    expect(locationParam("Studio A", known)).toBe("Studio A");
+    expect(locationParam("Studio Z", known)).toBeNull();
+    expect(locationParam(["Studio A"], known)).toBeNull();
+    expect(locationParam(undefined, known)).toBeNull();
   });
 });

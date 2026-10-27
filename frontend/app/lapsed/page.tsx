@@ -1,8 +1,10 @@
 import { connection } from "next/server";
-import { getAllCustomerStats, getUpcomingMemberIds } from "@/lib/queries";
+import { getLocations, getRiderStats, getUpcomingMemberIds, type RiderStat } from "@/lib/queries";
+import { locationParam } from "@/lib/filters";
 import { isLapsed, isOneAndDone } from "@/lib/tiers";
 import { berlinToday } from "@/lib/format";
 import RiderName, { BookedLegend } from "@/components/RiderName";
+import LocationSelect from "@/components/LocationSelect";
 import { Page, PageHeader, SectionTitle } from "@/components/ui";
 
 export const metadata = { title: "Lapsed — riders analytics" };
@@ -10,10 +12,16 @@ export const metadata = { title: "Lapsed — riders analytics" };
 // Reads the database and "today" on every request, so navigation may wait for the server.
 export const instant = false;
 
-export default async function LapsedPage() {
+export default async function LapsedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await connection();
+  const locations = getLocations();
+  const location = locationParam((await searchParams).location, locations);
 
-  const stats = getAllCustomerStats();
+  const stats = getRiderStats(location);
   const today = new Date();
   const booked = getUpcomingMemberIds(berlinToday(today));
   const oneAndDone = stats.filter((s) => isOneAndDone(s.attended, s.last_visit, today));
@@ -21,7 +29,13 @@ export default async function LapsedPage() {
 
   return (
     <Page>
-      <PageHeader title="Lapsed riders" />
+      <PageHeader title="Lapsed riders">
+        {location &&
+          `Visits at ${location} only: riders here may still ride at another studio (see Fav location).`}
+      </PageHeader>
+      <div style={{ marginBottom: "1rem" }}>
+        <LocationSelect locations={locations} value={location ?? ""} />
+      </div>
       <BookedLegend />
 
       <section style={{ marginBottom: "2.5rem" }}>
@@ -63,7 +77,7 @@ function CustomerTable({
   rows,
   booked,
 }: {
-  rows: ReturnType<typeof getAllCustomerStats>;
+  rows: RiderStat[];
   booked: Set<number>;
 }) {
   return (
@@ -75,6 +89,7 @@ function CustomerTable({
             <th>Attended</th>
             <th>First visit</th>
             <th>Last visit</th>
+            <th>Fav location</th>
           </tr>
         </thead>
         <tbody>
@@ -91,6 +106,7 @@ function CustomerTable({
               >
                 {c.last_visit ?? "—"}
               </td>
+              <td className="col-muted">{c.fav_location ?? "—"}</td>
             </tr>
           ))}
         </tbody>
