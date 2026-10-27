@@ -14,6 +14,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header
           style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 50, // above the calendar and search popovers (20)
             backgroundColor: "var(--color-ink)",
             borderBottom: "3px solid var(--color-ink)",
             padding: "0 2rem",
