@@ -6,3 +6,4 @@ __pycache__/
 *.har
 .DS_Store
 ROADMAP.md
+CHANGES.md

@@ -28,7 +28,7 @@ riders-attendance/          ← ROOT (backend/scraper/config.py: parent.parent.p
 │   ├── launchd/            ← macOS scheduling plist
 │   └── requirements*.txt
 ├── frontend/               ← Next.js dashboard (see frontend/README.md)
-├── CHANGES.md              ← UI change list, ticked off as done
+├── CHANGES.md              ← git-ignored; UI change list, ticked off as done
 ├── CLAUDE.md
 ├── Makefile
 └── ROADMAP.md              ← git-ignored
