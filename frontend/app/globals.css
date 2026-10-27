@@ -43,6 +43,13 @@
   --color-tier-1: color-mix(in srgb, var(--color-apricot) 75%, var(--color-tomato) 25%);
   --color-tier-0: color-mix(in srgb, var(--color-apricot) 65%, var(--color-ink) 35%);
 
+  /* Booking outcomes — same colours on every page */
+  --color-status-attended:    var(--color-chartreuse);
+  --color-status-no-show:     var(--color-tomato);
+  --color-status-cancelled:   var(--color-vista-blue);
+  --color-status-late-cancel: color-mix(in srgb, var(--color-tomato) 50%, var(--color-vista-blue) 50%);
+  --color-status-booked:      color-mix(in srgb, var(--color-apricot) 65%, var(--color-ink) 35%);
+
   /* Table row alternation — apricot base + faint vistaBlue tint */
   --color-row-alt: color-mix(in srgb, var(--color-apricot) 88%, var(--color-vista-blue) 12%);
 
@@ -173,6 +180,64 @@ body {
 .btn-destructive:hover {
   transform: translate(-3px, -3px);
   box-shadow: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FORM FIELDS & TOGGLES (filters, dropdowns, chart pickers)
+   ───────────────────────────────────────────────────────────── */
+.field {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.625rem;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  background-color: var(--color-apricot);
+  color: var(--color-ink);
+}
+
+.toggle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: 0.25rem 0.625rem;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  background-color: var(--color-apricot);
+  color: var(--color-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.toggle[aria-pressed="true"] {
+  background-color: var(--color-ink);
+  color: var(--color-apricot);
+}
+.toggle:focus-visible {
+  outline: 3px solid var(--color-vista-blue);
+  outline-offset: 2px;
+}
+
+/* Calendar popover (DatePicker): layout and colours are inline in the
+   component; only interaction states live here. */
+.calendar-day:hover:not(:disabled),
+.calendar-nav:hover {
+  outline: 2px solid var(--color-vista-blue);
+  outline-offset: -2px;
+}
+.calendar-day:focus-visible,
+.calendar-nav:focus-visible,
+.calendar-link:focus-visible {
+  outline: 2px solid var(--color-vista-blue);
+  outline-offset: 1px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--color-ink);
+  border-radius: 1px;
+  flex-shrink: 0;
 }
 
 /* ─────────────────────────────────────────────────────────────

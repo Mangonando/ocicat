@@ -1,12 +1,21 @@
-import { getReliabilityStats } from "@/lib/queries";
-import Link from "next/link";
+import { connection } from "next/server";
+import { getReliabilityStats, getUpcomingMemberIds } from "@/lib/queries";
+import { berlinToday } from "@/lib/format";
+import { OUTCOMES } from "@/lib/outcomes";
+import { BookedLegend } from "@/components/RiderName";
+import ReliabilityTable, { type ReliabilityEntry } from "@/components/ReliabilityTable";
 
-export const metadata = { title: "Reliability — ride.bln analytics" };
+export const metadata = { title: "Reliability — riders analytics" };
 
-export default function ReliabilityPage() {
-  const rows = getReliabilityStats(3);
+// Reads the database and "today" on every request, so navigation may wait for the server.
+export const instant = false;
 
-  if (rows.length === 0) {
+export default async function ReliabilityPage() {
+  await connection();
+  const stats = getReliabilityStats(3);
+  const booked = getUpcomingMemberIds(berlinToday());
+
+  if (stats.length === 0) {
     return (
       <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)" }}>Reliability</h1>
@@ -14,6 +23,17 @@ export default function ReliabilityPage() {
       </div>
     );
   }
+
+  const rows: ReliabilityEntry[] = stats.map((s) => ({
+    member_id: s.member_id,
+    name: s.name,
+    booked: booked.has(s.member_id),
+    resolved: s.checked_in + s.no_shows + s.cancelled + s.late_cancels,
+    attended: s.checked_in,
+    no_show: s.no_shows,
+    cancelled: s.cancelled,
+    late_cancel: s.late_cancels,
+  }));
 
   return (
     <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
@@ -27,66 +47,31 @@ export default function ReliabilityPage() {
       >
         Reliability
       </h1>
-      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
-        No-show rate = no-shows ÷ (attended + no-shows). Students with 3+ bookings shown.
+      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "1rem", maxWidth: "48rem" }}>
+        How each rider&apos;s past bookings ended, as a share of all their bookings that have an
+        outcome (upcoming bookings are left out). Attended + no-show + cancelled + late cancel =
+        100%. Missed = no-show + cancelled + late cancel. Riders with 3+ such bookings shown. Click
+        a column to sort.
       </p>
-      <div style={{ overflowX: "auto" }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Signups</th>
-              <th>Attended</th>
-              <th>No-shows</th>
-              <th>Cancelled</th>
-              <th>Late cancel</th>
-              <th>No-show %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((c) => {
-              const rate = c.no_show_rate ?? 0;
-              const isHigh = rate >= 30;
-              const isMid = rate >= 15 && rate < 30;
-              return (
-                <tr key={c.member_id} className="table-row-alt">
-                  <td className="col-name">
-                    <Link
-                      href={`/customers/${c.member_id}`}
-                      style={{ color: "var(--color-ink)", textDecorationColor: "var(--color-vista-blue)" }}
-                    >
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="col-number col-muted">{c.signups}</td>
-                  <td className="col-number" style={{ fontWeight: 500 }}>{c.attended}</td>
-                  <td
-                    className={`col-number${isHigh ? " col-alert" : ""}`}
-                    style={isMid && !isHigh ? { color: "var(--color-tomato)", opacity: 0.65 } : undefined}
-                  >
-                    {c.no_shows}
-                  </td>
-                  <td className="col-number col-muted">{c.cancelled}</td>
-                  <td className="col-number col-muted">{c.late_cancels}</td>
-                  <td
-                    className="col-number"
-                    style={{
-                      fontWeight: isHigh ? 500 : undefined,
-                      color: isHigh
-                        ? "var(--color-tomato)"
-                        : isMid
-                          ? "var(--color-ink)"
-                          : undefined,
-                    }}
-                  >
-                    {c.no_show_rate != null ? `${c.no_show_rate}%` : "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.5rem 1.25rem",
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--text-xs)",
+          marginBottom: "0.5rem",
+        }}
+      >
+        {OUTCOMES.map((o) => (
+          <span key={o.key} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <span className="swatch" style={{ backgroundColor: o.color }} />
+            {o.label}
+          </span>
+        ))}
       </div>
+      <BookedLegend />
+      <ReliabilityTable rows={rows} />
     </div>
   );
 }

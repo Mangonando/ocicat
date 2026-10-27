@@ -1,4 +1,20 @@
 import { getDb } from "./db";
+import type { PastClass } from "./locations";
+
+// Outcome counts used across queries. Early and late cancels are kept apart so
+// attended + no-shows + cancelled + late cancels = all resolved bookings.
+const OUTCOME_SUMS = `
+  SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)                       AS checked_in,
+  SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)                       AS no_shows,
+  SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 0 THEN 1 ELSE 0 END)  AS cancelled,
+  SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 1 THEN 1 ELSE 0 END)  AS late_cancels`;
+
+export interface Counts {
+  checked_in: number;
+  no_shows: number;
+  cancelled: number;
+  late_cancels: number;
+}
 
 export interface CustomerStat {
   member_id: number;
@@ -12,32 +28,14 @@ export interface CustomerStat {
   last_visit: string | null;
 }
 
-export interface TopRegular extends CustomerStat {
+export interface TopRegular {
+  member_id: number;
+  name: string;
+  attended: number;
+  first_visit: string | null;
+  last_visit: string | null;
   fav_location: string | null;
   fav_weekday: number | null;
-}
-
-export interface Visit {
-  booking_id: number;
-  class_id: number;
-  local_date: string;
-  class_name: string;
-  location: string | null;
-  weekday: number;
-  is_mine: number;
-}
-
-export interface MonthlyLocation {
-  location: string;
-  month: string;
-  headcount: number;
-}
-
-export interface LocationSummary {
-  location: string;
-  total_headcount: number;
-  classes: number;
-  avg_per_class: number;
 }
 
 export function getAllCustomerStats(): CustomerStat[] {
@@ -55,95 +53,118 @@ export function getAllCustomerStats(): CustomerStat[] {
   }
 }
 
-export function getTopRegulars(limit = 50): TopRegular[] {
+export function getLocations(): string[] {
   try {
-    return getDb()
-      .prepare(
-        `SELECT cs.member_id, cs.name, cs.attended, cs.no_shows, cs.cancelled,
-          cs.late_cancels, cs.signups, cs.first_visit, cs.last_visit,
-          (SELECT v.location FROM v_visits v
-           WHERE v.member_id = cs.member_id AND v.location IS NOT NULL
-           GROUP BY v.location ORDER BY COUNT(*) DESC LIMIT 1) AS fav_location,
-          (SELECT v.weekday FROM v_visits v
-           WHERE v.member_id = cs.member_id
-           GROUP BY v.weekday ORDER BY COUNT(*) DESC LIMIT 1) AS fav_weekday
-         FROM v_customer_stats cs
-         WHERE cs.attended > 0
-         ORDER BY cs.attended DESC
-         LIMIT ?`,
-      )
-      .all(limit) as TopRegular[];
+    return (
+      getDb()
+        .prepare(
+          `SELECT DISTINCT location FROM classes
+           WHERE location IS NOT NULL
+           ORDER BY location`,
+        )
+        .all() as { location: string }[]
+    ).map((r) => r.location);
   } catch {
     return [];
   }
 }
 
-export function getReliabilityStats(minBookings = 3) {
+/** Ranked by attended. With a location, only visits at that studio count. */
+export function getTopRegulars(limit = 50, location: string | null = null): TopRegular[] {
   try {
     return getDb()
       .prepare(
-        `SELECT member_id, name, signups, attended, no_shows, cancelled, late_cancels,
-          ROUND(100.0 * no_shows / NULLIF(attended + no_shows, 0), 1) AS no_show_rate
-         FROM v_customer_stats
-         WHERE attended + no_shows >= ?
-         ORDER BY no_show_rate DESC, no_shows DESC
-         LIMIT 100`,
+        `SELECT v.member_id, cu.name,
+          COUNT(*)          AS attended,
+          MIN(v.local_date) AS first_visit,
+          MAX(v.local_date) AS last_visit,
+          (SELECT v2.location FROM v_visits v2
+           WHERE v2.member_id = v.member_id AND v2.location IS NOT NULL
+           GROUP BY v2.location ORDER BY COUNT(*) DESC LIMIT 1) AS fav_location,
+          (SELECT v3.weekday FROM v_visits v3
+           WHERE v3.member_id = v.member_id AND (:location IS NULL OR v3.location = :location)
+           GROUP BY v3.weekday ORDER BY COUNT(*) DESC LIMIT 1) AS fav_weekday
+         FROM v_visits v
+         JOIN customers cu ON cu.member_id = v.member_id
+         WHERE :location IS NULL OR v.location = :location
+         GROUP BY v.member_id
+         ORDER BY attended DESC, last_visit DESC
+         LIMIT :limit`,
       )
-      .all(minBookings) as (CustomerStat & { no_show_rate: number | null })[];
+      .all({ location, limit }) as TopRegular[];
   } catch {
     return [];
   }
 }
 
-export function getMonthlyByLocation(): MonthlyLocation[] {
+export interface ReliabilityRow extends Counts {
+  member_id: number;
+  name: string;
+}
+
+/** Riders with at least `minResolved` bookings that have an outcome (not still booked). */
+export function getReliabilityStats(minResolved = 3): ReliabilityRow[] {
   try {
     return getDb()
       .prepare(
-        `SELECT COALESCE(location, 'Unknown') AS location,
-          strftime('%Y-%m', local_date) AS month,
-          SUM(checked_in) AS headcount
-         FROM v_class_summary
-         WHERE is_mine = 1 AND is_cancelled = 0
-         GROUP BY location, month
-         ORDER BY month, location`,
+        `SELECT cu.member_id, cu.name, ${OUTCOME_SUMS}
+         FROM signups s
+         JOIN customers cu ON cu.member_id = s.member_id
+         WHERE s.status != 'booked'
+         GROUP BY cu.member_id
+         HAVING COUNT(*) >= ?`,
       )
-      .all() as MonthlyLocation[];
+      .all(minResolved) as ReliabilityRow[];
   } catch {
     return [];
   }
 }
 
-export function getLocationSummaries(): LocationSummary[] {
+export interface CustomerBooking {
+  booking_id: number;
+  class_id: number;
+  local_date: string;
+  local_time: string;
+  class_name: string;
+  location: string | null;
+  weekday: number;
+  is_mine: number;
+  status: string;
+  late_cancel: number;
+}
+
+/** Every booking a rider made, whatever its outcome, newest first. */
+export function getCustomerBookings(memberId: number): CustomerBooking[] {
   try {
     return getDb()
       .prepare(
-        `SELECT COALESCE(location, 'Unknown') AS location,
-          SUM(checked_in) AS total_headcount,
-          COUNT(*) AS classes,
-          ROUND(1.0 * SUM(checked_in) / NULLIF(COUNT(*), 0), 1) AS avg_per_class
-         FROM v_class_summary
-         WHERE is_mine = 1 AND is_cancelled = 0
-         GROUP BY location
-         ORDER BY total_headcount DESC`,
+        `SELECT s.booking_id, s.class_id, c.local_date, c.local_time, c.name AS class_name,
+          c.location, c.weekday, c.is_mine, s.status, s.late_cancel
+         FROM signups s
+         JOIN classes c ON c.id = s.class_id
+         WHERE s.member_id = ? AND c.is_cancelled = 0
+         ORDER BY c.local_date DESC, c.local_time DESC`,
       )
-      .all() as LocationSummary[];
+      .all(memberId) as CustomerBooking[];
   } catch {
     return [];
   }
 }
 
-export function getCustomerVisits(memberId: number): Visit[] {
+/** Riders with at least one booking for a class today or later. */
+export function getUpcomingMemberIds(today: string): Set<number> {
   try {
-    return getDb()
+    const rows = getDb()
       .prepare(
-        `SELECT booking_id, class_id, local_date, class_name, location, weekday, is_mine
-         FROM v_visits
-         WHERE member_id = ?
-         ORDER BY local_date DESC`,
+        `SELECT DISTINCT s.member_id
+         FROM signups s
+         JOIN classes c ON c.id = s.class_id
+         WHERE c.local_date >= ? AND c.is_cancelled = 0 AND s.status = 'booked'`,
       )
-      .all(memberId) as Visit[];
+      .all(today) as { member_id: number }[];
+    return new Set(rows.map((r) => r.member_id));
   } catch {
-    return [];
+    return new Set();
   }
 }
 
@@ -186,101 +207,28 @@ export function getUpcomingBookings(from: string, to: string): UpcomingBooking[]
   }
 }
 
-/* ── Summary stats for the dashboard home ────────────────────── */
-export interface SummaryStats {
-  total_classes: number;
-  total_bookings: number;
-  total_attended: number;
-  total_no_shows: number;
-  total_cancelled: number;
-  unique_students: number;
-}
-
-export function getSummaryStats(): SummaryStats | null {
-  try {
-    return (
-      getDb()
-        .prepare(
-          `SELECT
-            COUNT(DISTINCT c.id)                                                AS total_classes,
-            COUNT(s.booking_id)                                                 AS total_bookings,
-            SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)           AS total_attended,
-            SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)           AS total_no_shows,
-            SUM(CASE WHEN s.status = 'cancelled'  THEN 1 ELSE 0 END)           AS total_cancelled,
-            COUNT(DISTINCT s.member_id)                                         AS unique_students
-           FROM signups s
-           JOIN classes c ON c.id = s.class_id
-           WHERE c.is_mine = 1 AND c.is_cancelled = 0`,
-        )
-        .get() as SummaryStats | undefined
-    ) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/* ── Weekly attendance (line chart) ──────────────────────────── */
-export interface WeeklyPoint {
-  week: string;
-  week_start: string;
-  attended: number;
-}
-
-export function getWeeklyAttendance(): WeeklyPoint[] {
+/* ── Past classes (Locations page computes every chart from these) ── */
+// Past only: upcoming classes have no check-ins yet and would read as zeros.
+export function getPastClasses(today: string): PastClass[] {
   try {
     return getDb()
       .prepare(
-        `SELECT
-          strftime('%Y-W%W', c.local_date)                                    AS week,
-          MIN(c.local_date)                                                   AS week_start,
-          SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)           AS attended
-         FROM signups s
-         JOIN classes c ON c.id = s.class_id
-         WHERE c.is_mine = 1 AND c.is_cancelled = 0
-         GROUP BY week
-         ORDER BY week
-         LIMIT 52`,
+        `SELECT c.id, c.name, c.local_date, c.local_time, c.weekday,
+          COALESCE(c.location, 'Unknown') AS location,
+          ${OUTCOME_SUMS}
+         FROM classes c
+         LEFT JOIN signups s ON s.class_id = c.id
+         WHERE c.is_mine = 1 AND c.is_cancelled = 0 AND c.local_date < ?
+         GROUP BY c.id
+         ORDER BY c.local_date, c.local_time`,
       )
-      .all() as WeeklyPoint[];
+      .all(today) as PastClass[];
   } catch {
     return [];
   }
 }
 
-/* ── Attendance per slot (bar chart by weekday × time) ───────── */
-export interface SlotPoint {
-  weekday: number;
-  local_time: string;
-  classes: number;
-  total_attended: number;
-  avg_per_class: number;
-}
-
-export function getSlotAttendance(): SlotPoint[] {
-  try {
-    return getDb()
-      .prepare(
-        `SELECT
-          c.weekday,
-          c.local_time,
-          COUNT(DISTINCT c.id)                                                AS classes,
-          SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)           AS total_attended,
-          ROUND(
-            1.0 * SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)
-            / NULLIF(COUNT(DISTINCT c.id), 0), 1)                            AS avg_per_class
-         FROM signups s
-         JOIN classes c ON c.id = s.class_id
-         WHERE c.is_mine = 1 AND c.is_cancelled = 0
-         GROUP BY c.weekday, c.local_time
-         ORDER BY avg_per_class DESC`,
-      )
-      .all() as SlotPoint[];
-  } catch {
-    return [];
-  }
-}
-
-/* ── Per-class attendance table ──────────────────────────────── */
+/* ── Per-class attendance (Overview table, tiles and donut) ──── */
 export interface ClassAttendance {
   id: number;
   name: string;
@@ -290,13 +238,17 @@ export interface ClassAttendance {
   total_bookings: number;
   check_ins: number;
   no_shows: number;
-  cancellations: number;
+  cancellations: number; // early cancels only
+  late_cancels: number;
+  booked: number; // not resolved yet (upcoming classes)
   attendance_rate: number | null;
+  cancel_rate: number | null; // all cancels ÷ bookings
+  member_ids: number[]; // to count unique riders for any filter; ids only, no names
 }
 
-export function getClassAttendance(limit = 200): ClassAttendance[] {
+export function getClassAttendance(): ClassAttendance[] {
   try {
-    return getDb()
+    const rows = getDb()
       .prepare(
         `SELECT
           c.id,
@@ -307,19 +259,29 @@ export function getClassAttendance(limit = 200): ClassAttendance[] {
           COUNT(s.booking_id)                                                       AS total_bookings,
           SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END)                 AS check_ins,
           SUM(CASE WHEN s.status = 'no_show'    THEN 1 ELSE 0 END)                 AS no_shows,
-          SUM(CASE WHEN s.status = 'cancelled'  THEN 1 ELSE 0 END)                 AS cancellations,
+          SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 0 THEN 1 ELSE 0 END) AS cancellations,
+          SUM(CASE WHEN s.status = 'cancelled' AND s.late_cancel = 1 THEN 1 ELSE 0 END) AS late_cancels,
+          SUM(CASE WHEN s.status = 'booked'     THEN 1 ELSE 0 END)                 AS booked,
           ROUND(
             100.0 * SUM(CASE WHEN s.status = 'checked_in' THEN 1 ELSE 0 END) /
             NULLIF(SUM(CASE WHEN s.status IN ('checked_in','no_show') THEN 1 ELSE 0 END), 0),
-            1)                                                                      AS attendance_rate
+            1)                                                                      AS attendance_rate,
+          ROUND(
+            100.0 * SUM(CASE WHEN s.status = 'cancelled' THEN 1 ELSE 0 END) /
+            NULLIF(COUNT(s.booking_id), 0),
+            1)                                                                      AS cancel_rate,
+          GROUP_CONCAT(DISTINCT s.member_id)                                        AS member_ids
          FROM classes c
          LEFT JOIN signups s ON s.class_id = c.id
          WHERE c.is_mine = 1 AND c.is_cancelled = 0
          GROUP BY c.id
-         ORDER BY c.local_date DESC, c.local_time DESC
-         LIMIT ?`,
+         ORDER BY c.local_date DESC, c.local_time DESC`,
       )
-      .all(limit) as ClassAttendance[];
+      .all() as (Omit<ClassAttendance, "member_ids"> & { member_ids: string | null })[];
+    return rows.map((r) => ({
+      ...r,
+      member_ids: r.member_ids ? r.member_ids.split(",").map(Number) : [],
+    }));
   } catch {
     return [];
   }

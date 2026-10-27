@@ -9,6 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { studioColor } from "@/lib/studios";
 
 interface MonthPoint {
   month: string;
@@ -18,16 +19,12 @@ interface MonthPoint {
 interface Props {
   data: MonthPoint[];
   locations: string[];
+  /** Stacked bars add up to a total; side-by-side bars compare averages. */
+  stacked?: boolean;
+  xKey?: string;
 }
 
-const PALETTE = [
-  "var(--color-chartreuse)",
-  "var(--color-vista-blue)",
-  "var(--color-tomato)",
-  "var(--color-tier-4)",
-];
-
-export default function TrendChart({ data, locations }: Props) {
+export default function TrendChart({ data, locations, stacked = true, xKey = "month" }: Props) {
   if (data.length === 0) return null;
   return (
     <div
@@ -42,7 +39,7 @@ export default function TrendChart({ data, locations }: Props) {
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={data} margin={{ top: 4, right: 16, left: -16, bottom: 4 }}>
           <XAxis
-            dataKey="month"
+            dataKey={xKey}
             tick={{ fontSize: 11, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
             axisLine={{ stroke: "var(--color-apricot)", strokeOpacity: 0.2 }}
             tickLine={false}
@@ -70,12 +67,12 @@ export default function TrendChart({ data, locations }: Props) {
               paddingTop: "0.5rem",
             }}
           />
-          {locations.map((loc, i) => (
+          {locations.map((loc) => (
             <Bar
               key={loc}
               dataKey={loc}
-              stackId="a"
-              fill={PALETTE[i % PALETTE.length]}
+              stackId={stacked ? "a" : undefined}
+              fill={studioColor(loc)}
               isAnimationActive={true}
               animationDuration={500}
               animationEasing="ease-out"

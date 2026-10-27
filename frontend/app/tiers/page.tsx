@@ -1,16 +1,23 @@
-import { getAllCustomerStats } from "@/lib/queries";
+import { connection } from "next/server";
+import { getAllCustomerStats, getUpcomingMemberIds } from "@/lib/queries";
 import { getTier, TIERS } from "@/lib/tiers";
-import Link from "next/link";
+import { berlinToday } from "@/lib/format";
+import RiderName, { BookedLegend } from "@/components/RiderName";
 
-export const metadata = { title: "Loyalty tiers — ride.bln analytics" };
+export const metadata = { title: "Cadence — riders analytics" };
 
-export default function TiersPage() {
+// Reads the database and "today" on every request, so navigation may wait for the server.
+export const instant = false;
+
+export default async function TiersPage() {
+  await connection();
   const stats = getAllCustomerStats();
+  const booked = getUpcomingMemberIds(berlinToday());
 
   if (stats.length === 0) {
     return (
       <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)" }}>Loyalty tiers</h1>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)" }}>Cadence</h1>
         <p style={{ marginTop: "1rem", opacity: 0.55 }}>No data yet. Run the scraper first.</p>
       </div>
     );
@@ -32,10 +39,10 @@ export default function TiersPage() {
           marginBottom: "0.25rem",
         }}
       >
-        Loyalty tiers
+        Cadence
       </h1>
       <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.55, marginBottom: "2rem" }}>
-        {total} students, ranked by how many classes they have attended.
+        {total} riders, grouped by how many classes they have attended.
       </p>
 
       {/* Proportional tier bar */}
@@ -65,7 +72,7 @@ export default function TiersPage() {
                   borderRight: "1px solid var(--color-ink)",
                   transition: "flex 300ms ease",
                 }}
-                title={`${label}: ${customers.length} students (${Math.round((customers.length / total) * 100)}%)`}
+                title={`${label}: ${customers.length} riders (${Math.round((customers.length / total) * 100)}%)`}
               >
                 {customers.length / total > 0.08 && (
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 500 }}>
@@ -106,6 +113,8 @@ export default function TiersPage() {
         </div>
       </div>
 
+      <BookedLegend />
+
       {/* Per-tier tables */}
       {buckets.map(({ label, color, customers }) =>
         customers.length === 0 ? null : (
@@ -139,7 +148,7 @@ export default function TiersPage() {
                   opacity: 0.55,
                 }}
               >
-                {customers.length} student{customers.length !== 1 ? "s" : ""}
+                {customers.length} rider{customers.length !== 1 ? "s" : ""}
               </span>
             </div>
             <div style={{ overflowX: "auto" }}>
@@ -156,12 +165,7 @@ export default function TiersPage() {
                   {customers.map((c) => (
                     <tr key={c.member_id} className="table-row-alt">
                       <td className="col-name">
-                        <Link
-                          href={`/customers/${c.member_id}`}
-                          style={{ color: "var(--color-ink)", textDecorationColor: "var(--color-vista-blue)" }}
-                        >
-                          {c.name}
-                        </Link>
+                        <RiderName memberId={c.member_id} name={c.name} booked={booked.has(c.member_id)} />
                       </td>
                       <td className="col-number" style={{ fontWeight: 500 }}>{c.attended}</td>
                       <td className="col-muted">{c.first_visit ?? "—"}</td>

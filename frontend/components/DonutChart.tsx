@@ -1,5 +1,7 @@
 "use client";
 
+import { fmt } from "@/lib/format";
+
 interface Slice {
   label: string;
   value: number;
@@ -10,6 +12,7 @@ interface Props {
   slices: Slice[];
   size?: number;
   innerRatio?: number;
+  label?: string;
 }
 
 function describeDonutSlice(
@@ -20,6 +23,8 @@ function describeDonutSlice(
   startAngle: number,
   endAngle: number,
 ): string {
+  // A full circle has the same start and end point and would not draw at all.
+  endAngle = Math.min(endAngle, startAngle + Math.PI * 2 - 0.0001);
   const large = endAngle - startAngle > Math.PI ? 1 : 0;
   const sx = cx + r * Math.sin(startAngle);
   const sy = cy - r * Math.cos(startAngle);
@@ -38,7 +43,7 @@ function describeDonutSlice(
   );
 }
 
-export default function DonutChart({ slices, size = 220, innerRatio = 0.55 }: Props) {
+export default function DonutChart({ slices, size = 220, innerRatio = 0.55, label = "Booking status breakdown" }: Props) {
   const total = slices.reduce((s, d) => s + d.value, 0);
   if (total === 0) return null;
 
@@ -61,13 +66,13 @@ export default function DonutChart({ slices, size = 220, innerRatio = 0.55 }: Pr
   });
 
   return (
-    <figure style={{ display: "inline-block", margin: 0 }} aria-label="Booking status breakdown">
+    <figure style={{ display: "inline-block", margin: 0 }} aria-label={label}>
       <svg
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         role="img"
-        aria-label="Donut chart showing check-in, no-show, and cancellation split"
+        aria-label={`${label}: donut chart`}
       >
         {paths.map((s) => (
           <path
@@ -86,7 +91,7 @@ export default function DonutChart({ slices, size = 220, innerRatio = 0.55 }: Pr
           dominantBaseline="middle"
           style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fill: "var(--color-ink)" }}
         >
-          {total.toLocaleString()}
+          {fmt(total)}
         </text>
         <text
           x={cx}
@@ -140,7 +145,7 @@ export default function DonutChart({ slices, size = 220, innerRatio = 0.55 }: Pr
                   flexShrink: 0,
                 }}
               />
-              {s.label} — {s.value.toLocaleString()} ({Math.round((s.value / total) * 100)}%)
+              {s.label} — {fmt(s.value)} ({Math.round((s.value / total) * 100)}%)
             </li>
           ))}
         </ul>

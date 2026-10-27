@@ -4,8 +4,8 @@ import NavLinks from "@/components/NavLinks";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ride.bln analytics",
-  description: "Local attendance dashboard for ride.bln indoor cycling",
+  title: "riders analytics",
+  description: "Local attendance dashboard for indoor cycling riders",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               flexShrink: 0,
             }}
           >
-            ride.bln
+            riders
           </Link>
           <NavLinks />
         </header>

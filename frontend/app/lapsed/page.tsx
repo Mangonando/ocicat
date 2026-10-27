@@ -1,8 +1,12 @@
-import { getAllCustomerStats } from "@/lib/queries";
+import { getAllCustomerStats, getUpcomingMemberIds } from "@/lib/queries";
 import { isLapsed, isOneAndDone } from "@/lib/tiers";
-import Link from "next/link";
+import { berlinToday } from "@/lib/format";
+import RiderName, { BookedLegend } from "@/components/RiderName";
 
-export const metadata = { title: "Lapsed — ride.bln analytics" };
+export const metadata = { title: "Lapsed — riders analytics" };
+
+// Reads the database and "today" on every request, so navigation may wait for the server.
+export const instant = false;
 
 export default async function LapsedPage() {
   const { connection } = await import("next/server");
@@ -10,6 +14,7 @@ export default async function LapsedPage() {
 
   const stats = getAllCustomerStats();
   const today = new Date();
+  const booked = getUpcomingMemberIds(berlinToday(today));
   const oneAndDone = stats.filter((s) => isOneAndDone(s.attended, s.last_visit, today));
   const lapsed = stats.filter((s) => isLapsed(s.attended, s.last_visit, today));
 
@@ -20,11 +25,12 @@ export default async function LapsedPage() {
           fontFamily: "var(--font-display)",
           fontSize: "var(--text-xl)",
           letterSpacing: "-0.01em",
-          marginBottom: "2rem",
+          marginBottom: "1rem",
         }}
       >
-        Lapsed students
+        Lapsed riders
       </h1>
+      <BookedLegend />
 
       <section style={{ marginBottom: "2.5rem" }}>
         <h2
@@ -54,7 +60,7 @@ export default async function LapsedPage() {
             None right now — great sign.
           </p>
         ) : (
-          <CustomerTable rows={oneAndDone} />
+          <CustomerTable rows={oneAndDone} booked={booked} />
         )}
       </section>
 
@@ -86,14 +92,20 @@ export default async function LapsedPage() {
             No one lapsed. Keep it up.
           </p>
         ) : (
-          <CustomerTable rows={lapsed} />
+          <CustomerTable rows={lapsed} booked={booked} />
         )}
       </section>
     </div>
   );
 }
 
-function CustomerTable({ rows }: { rows: ReturnType<typeof getAllCustomerStats> }) {
+function CustomerTable({
+  rows,
+  booked,
+}: {
+  rows: ReturnType<typeof getAllCustomerStats>;
+  booked: Set<number>;
+}) {
   return (
     <div style={{ overflowX: "auto" }}>
       <table className="data-table">
@@ -109,12 +121,7 @@ function CustomerTable({ rows }: { rows: ReturnType<typeof getAllCustomerStats> 
           {rows.map((c) => (
             <tr key={c.member_id} className="table-row-alt">
               <td className="col-name">
-                <Link
-                  href={`/customers/${c.member_id}`}
-                  style={{ color: "var(--color-ink)", textDecorationColor: "var(--color-vista-blue)" }}
-                >
-                  {c.name}
-                </Link>
+                <RiderName memberId={c.member_id} name={c.name} booked={booked.has(c.member_id)} />
               </td>
               <td className="col-number" style={{ fontWeight: 500 }}>{c.attended}</td>
               <td className="col-muted">{c.first_visit ?? "—"}</td>

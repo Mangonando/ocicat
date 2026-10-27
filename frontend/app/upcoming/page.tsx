@@ -1,10 +1,13 @@
 import { connection } from "next/server";
 import { getUpcomingBookings, type UpcomingBooking } from "@/lib/queries";
 import Link from "next/link";
+import { berlinToday } from "@/lib/format";
+import { studioColor, studioShort } from "@/lib/studios";
 
-export const metadata = { title: "Upcoming classes — ride.bln analytics" };
+export const metadata = { title: "Upcoming classes — riders analytics" };
 
-const LOCATIONS = ["Studio Charlottenburg", "Studio Prenzlauer Berg"];
+// Reads the database and "today" on every request, so navigation may wait for the server.
+export const instant = false;
 
 function formatDate(iso: string): string {
   return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
@@ -40,21 +43,21 @@ function groupByClass(rows: UpcomingBooking[]): ClassGroup[] {
     }
     map.get(r.class_id)!.bookings.push(r);
   }
-  return [...map.values()].sort((a, b) => a.local_date.localeCompare(b.local_date));
+  return [...map.values()].sort(
+    (a, b) =>
+      a.local_date.localeCompare(b.local_date) || a.local_time.localeCompare(b.local_time),
+  );
 }
 
 export default async function UpcomingPage() {
   await connection();
 
-  const today = new Date()
-    .toLocaleDateString("sv", { timeZone: "Europe/Berlin" })
-    .slice(0, 10);
-  const twoWeeks = new Date(new Date().getTime() + 14 * 86_400_000)
-    .toLocaleDateString("sv", { timeZone: "Europe/Berlin" })
-    .slice(0, 10);
+  const today = berlinToday();
+  const twoWeeks = berlinToday(new Date(new Date().getTime() + 14 * 86_400_000));
 
   const rows = getUpcomingBookings(today, twoWeeks);
-  const totalClasses = new Set(rows.map((r) => r.class_id)).size;
+  const classes = groupByClass(rows);
+  const totalClasses = classes.length;
 
   return (
     <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
@@ -88,30 +91,11 @@ export default async function UpcomingPage() {
         </div>
       )}
 
-      {LOCATIONS.map((loc) => {
-        const classes = groupByClass(rows.filter((r) => r.location === loc));
-        if (classes.length === 0) return null;
-        return (
-          <section key={loc} style={{ marginBottom: "2.5rem" }}>
-            <h2
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "var(--text-lg)",
-                borderBottom: "2px solid var(--color-ink)",
-                paddingBottom: "0.5rem",
-                marginBottom: "1.25rem",
-              }}
-            >
-              {loc}
-            </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {classes.map((cls) => (
-                <ClassCard key={cls.class_id} cls={cls} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        {classes.map((cls) => (
+          <ClassCard key={cls.class_id} cls={cls} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -147,6 +131,7 @@ function ClassCard({ cls }: { cls: ClassGroup }) {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", opacity: 0.6 }}>
             {formatDate(cls.local_date)} · {cls.local_time}
           </span>
+          <StudioLabel location={cls.location} />
         </div>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
           <span>
@@ -226,5 +211,24 @@ function ClassCard({ cls }: { cls: ClassGroup }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function StudioLabel({ location }: { location: string | null }) {
+  return (
+    <span
+      style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: "var(--text-xs)",
+        backgroundColor: studioColor(location),
+        color: "var(--color-ink)",
+        padding: "1px 6px",
+        borderRadius: "var(--radius)",
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {studioShort(location)}
+    </span>
   );
 }

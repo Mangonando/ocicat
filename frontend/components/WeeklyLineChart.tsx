@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -9,25 +10,88 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import type { WeeklyPoint } from "@/lib/queries";
+import type { Counts } from "@/lib/queries";
+import { mondayOf, shortDate, weekRange } from "@/lib/format";
+import { studioColor, studioShort } from "@/lib/studios";
 
 interface Props {
-  data: WeeklyPoint[];
+  /** Already filtered by the page (class name, location, dates). One row per class or day. */
+  data: (Counts & { local_date: string; location: string })[];
+  locations: string[]; // one line per studio listed
+  rangeLabel: string | null; // the page's active date range, for the caption
 }
 
-function formatWeek(week: string): string {
-  const [, w] = week.split("-W");
-  return `W${w}`;
-}
+const METRICS: { key: keyof Counts; label: string; unit: string }[] = [
+  { key: "checked_in", label: "Check-ins", unit: "checked in" },
+  { key: "no_shows", label: "No-shows", unit: "no-shows" },
+  { key: "cancelled", label: "Cancels", unit: "cancelled" },
+  { key: "late_cancels", label: "Late cancels", unit: "late cancels" },
+];
 
-export default function WeeklyLineChart({ data }: Props) {
+export default function WeeklyLineChart({ data, locations, rangeLabel: activeRange }: Props) {
+  const [metric, setMetric] = useState<keyof Counts>("checked_in");
+  const current = METRICS.find((m) => m.key === metric)!;
+
+  const chartData = useMemo(() => {
+    // Sum classes into Monday-start weeks. Rows arrive filtered, so a date range can cut mid-week.
+    const totals = new Map<string, number>(); // "week|location" → value
+    for (const d of data) {
+      const key = `${mondayOf(d.local_date)}|${d.location}`;
+      totals.set(key, (totals.get(key) ?? 0) + d[metric]);
+    }
+    const allWeeks = [...new Set([...totals.keys()].map((k) => k.split("|")[0]))].sort();
+    const weeks = activeRange ? allWeeks : allWeeks.slice(-20);
+    return weeks.map((week_start) => {
+      const point: { week_start: string; label: string; [loc: string]: string | number | null } = {
+        week_start,
+        label: shortDate(week_start),
+      };
+      for (const loc of locations) {
+        // No class at that studio that week → a gap, not a false zero.
+        point[loc] = totals.get(`${week_start}|${loc}`) ?? null;
+      }
+      return point;
+    });
+  }, [data, locations, metric, activeRange]);
+
   if (data.length === 0) return null;
 
-  const avg = Math.round(data.reduce((s, d) => s + d.attended, 0) / data.length);
-  const displayData = data.slice(-20).map((d) => ({ ...d, label: formatWeek(d.week) }));
+  // Average only for a single studio; with two lines it would be ambiguous.
+  const single = locations.length === 1 ? locations[0] : null;
+  const singleValues = single
+    ? chartData.map((d) => d[single]).filter((v): v is number => typeof v === "number")
+    : [];
+  const avg = singleValues.length > 0
+    ? Math.round(singleValues.reduce((s, v) => s + v, 0) / singleValues.length)
+    : null;
 
   return (
     <div>
+      {/* Metric picker; studios and dates come from the page filters */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem 1.25rem", marginBottom: "0.75rem", alignItems: "center" }}>
+        <div role="group" aria-label="Metric" style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+          {METRICS.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              className="toggle"
+              aria-pressed={metric === m.key}
+              onClick={() => setMetric(m.key)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: "0.75rem", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)" }}>
+          {locations.map((loc) => (
+            <span key={loc} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <span className="swatch" style={{ backgroundColor: studioColor(loc) }} />
+              {studioShort(loc)}
+            </span>
+          ))}
+        </div>
+      </div>
+
       <div
         style={{
           backgroundColor: "var(--color-ink)",
@@ -37,15 +101,17 @@ export default function WeeklyLineChart({ data }: Props) {
           boxShadow: "var(--shadow-md)",
         }}
       >
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={displayData} margin={{ top: 4, right: 16, left: -16, bottom: 4 }}>
+        <ResponsiveContainer width="100%" height={240}>
+          <LineChart data={chartData} margin={{ top: 4, right: 16, left: -16, bottom: 4 }}>
             <XAxis
               dataKey="label"
               tick={{ fontSize: 11, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
               axisLine={{ stroke: "var(--color-apricot)", strokeOpacity: 0.2 }}
               tickLine={false}
+              minTickGap={12}
             />
             <YAxis
+              allowDecimals={false}
               tick={{ fontSize: 11, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
               axisLine={false}
               tickLine={false}
@@ -59,33 +125,45 @@ export default function WeeklyLineChart({ data }: Props) {
                 fontSize: "0.75rem",
                 color: "var(--color-apricot)",
               }}
-              formatter={(val) => [val ?? 0, "checked in"]}
-              labelFormatter={(l) => `Week ${l}`}
-            />
-            <ReferenceLine
-              y={avg}
-              stroke="var(--color-vista-blue)"
-              strokeDasharray="4 3"
-              strokeWidth={1.5}
-              label={{
-                value: `avg ${avg}`,
-                fill: "var(--color-vista-blue)",
-                fontSize: 10,
-                fontFamily: "var(--font-mono)",
-                position: "insideTopRight",
+              labelStyle={{ color: "var(--color-apricot)", fontWeight: 500 }}
+              formatter={(val, name) => [val == null ? "no class" : `${val} ${current.unit}`, studioShort(String(name))]}
+              labelFormatter={(_, payload) => {
+                const week = payload?.[0]?.payload?.week_start;
+                return week ? weekRange(String(week)) : "";
               }}
             />
-            <Line
-              type="monotone"
-              dataKey="attended"
-              stroke="var(--color-chartreuse)"
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 4, fill: "var(--color-chartreuse)", stroke: "var(--color-ink)", strokeWidth: 2 }}
-              isAnimationActive={true}
-              animationDuration={600}
-              animationEasing="ease-out"
-            />
+            {avg != null && (
+              <ReferenceLine
+                y={avg}
+                stroke="var(--color-apricot)"
+                strokeOpacity={0.6}
+                strokeDasharray="4 3"
+                strokeWidth={1.5}
+                label={{
+                  value: `avg ${avg}`,
+                  fill: "var(--color-apricot)",
+                  fontSize: 10,
+                  fontFamily: "var(--font-mono)",
+                  position: "insideTopRight",
+                }}
+              />
+            )}
+            {locations.map((loc) => (
+                <Line
+                  key={loc}
+                  type="monotone"
+                  dataKey={loc}
+                  name={loc}
+                  connectNulls
+                  stroke={studioColor(loc)}
+                  strokeWidth={2.5}
+                  dot={{ r: 2.5, fill: studioColor(loc), strokeWidth: 0 }}
+                  activeDot={{ r: 4, fill: studioColor(loc), stroke: "var(--color-ink)", strokeWidth: 2 }}
+                  isAnimationActive={true}
+                  animationDuration={600}
+                  animationEasing="ease-out"
+                />
+              ))}
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -98,8 +176,10 @@ export default function WeeklyLineChart({ data }: Props) {
           opacity: 0.55,
         }}
       >
-        Weekly check-ins — last {displayData.length} weeks.{" "}
-        <span style={{ color: "var(--color-vista-blue)", opacity: 1 }}>Dashed</span> = rolling average ({avg}/week).
+        {current.label} per week (week starting Monday), past classes only,{" "}
+        {activeRange ? activeRange : `last ${chartData.length} weeks`}.
+        Weeks without a class at a studio are skipped, not counted as zero.
+        {avg != null && " Dashed = average per week."}
       </p>
     </div>
   );

@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import type { SlotPoint } from "@/lib/queries";
+import type { SlotPoint } from "@/lib/locations";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -46,9 +46,9 @@ export default function SlotBarChart({ data }: Props) {
               axisLine={{ stroke: "var(--color-apricot)", strokeOpacity: 0.2 }}
               tickLine={false}
               interval={0}
-              angle={-40}
-              textAnchor="end"
-              height={48}
+              angle={chartData.length > 4 ? -40 : 0}
+              textAnchor={chartData.length > 4 ? "end" : "middle"}
+              height={chartData.length > 4 ? 48 : 24}
             />
             <YAxis
               tick={{ fontSize: 10, fill: "var(--color-apricot)", fontFamily: "var(--font-mono)", opacity: 0.7 }}
@@ -75,6 +75,8 @@ export default function SlotBarChart({ data }: Props) {
               }}
               formatter={(val) => [`${val ?? 0} avg/class`]}
               labelStyle={{ color: "var(--color-chartreuse)", fontWeight: 500 }}
+              itemStyle={{ color: "var(--color-apricot)" }}
+              cursor={{ fill: "var(--color-apricot)", fillOpacity: 0.08 }}
             />
             <Bar
               dataKey="avg_per_class"
@@ -104,7 +106,7 @@ export default function SlotBarChart({ data }: Props) {
         }}
       >
         Average check-ins per class slot.{" "}
-        <span style={{ color: "var(--color-chartreuse)", opacity: 1 }}>Highlighted</span> = best-attended slot.
+        <span className="swatch" style={{ backgroundColor: "var(--color-chartreuse)", verticalAlign: "middle" }} /> = best-attended slot.
       </p>
     </div>
   );
