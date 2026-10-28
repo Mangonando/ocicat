@@ -86,7 +86,7 @@ somewhere else. More detail in [frontend/README.md](frontend/README.md).
 
 ### 3. Weekly schedule (macOS, optional)
 
-`backend/launchd/` has a launchd job that runs the scraper every Tuesday at 09:00 (or on wake
+`backend/launchd/` has a launchd job that runs the scraper every Wednesday at 09:15 (or on wake
 if the laptop was asleep) and logs to `data/scrape.log`. Adjust the paths in the plist, then:
 
 ```bash

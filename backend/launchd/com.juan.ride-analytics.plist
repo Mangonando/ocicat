@@ -14,15 +14,15 @@
     <key>WorkingDirectory</key>
     <string>/Users/juanramirez/learning/riders-attendance/backend/scraper</string>
 
-    <!-- Every Tuesday at 09:00. launchd runs it on wake if the machine was asleep. -->
+    <!-- Every Wednesday at 09:15. launchd runs it on wake if the machine was asleep. -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Weekday</key>
-        <integer>2</integer>
+        <integer>3</integer>
         <key>Hour</key>
         <integer>9</integer>
         <key>Minute</key>
-        <integer>0</integer>
+        <integer>15</integer>
     </dict>
 
     <key>StandardOutPath</key>
